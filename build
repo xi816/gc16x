@@ -1,0 +1,8 @@
+set -xe
+
+build() {
+  gcc src/main.c -Ilib -o gc16;
+}
+
+build;
+

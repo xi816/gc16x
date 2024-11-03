@@ -1,0 +1,5 @@
+PUSH  -> 0x19 (PUSH $W)
+INT   -> 0xC2 (INT $B)
+LDA   -> 0x55 (LDA $W)
+NOP   -> 0xEA (NOP)
+

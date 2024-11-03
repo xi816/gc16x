@@ -1,0 +1,9 @@
+#!/usr/bin/bash
+
+build () {
+	gcc main.c -o ../../mkfs.govnfs;
+}
+
+# Build
+build;
+

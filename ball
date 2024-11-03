@@ -1,0 +1,24 @@
+#!/usr/bin/bash
+# Build all of the programs
+
+# Show executed commands
+set -xe
+
+# Build the CGovnOS virtual machine (Govno Core 16X)
+./build
+
+# Build mkfs.govnfs
+cd src/mkfs.govnfs/
+./build
+cd ../../
+
+# Build gboot
+cd src/gboot/
+./build
+cd ../../
+
+# Build GASMAN
+cd src/gasman/
+./build
+cd ../../
+

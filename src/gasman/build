@@ -1,0 +1,9 @@
+#!/usr/bin/bash
+
+build () {
+  gcc main.c -o ../../gasman;
+}
+
+# Build
+build;
+
