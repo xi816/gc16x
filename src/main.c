@@ -2,6 +2,7 @@
 #include <stdlib.h>
 #include <unistd.h>
 #include <string.h>
+#include <stdbool.h>
 #include <termios.h>
 
 #include <holyc-types.h>
@@ -31,12 +32,16 @@ U8 main(I32 argc, I8** argv) {
   const U32 flsize = ftell(fl);
   fseek(fl, 0, SEEK_SET);
 
-  printf("Size of a function: %d\n", sizeof(PUSH));
-
   GC gc;
+  fread(gc.mem, 1, flsize, fl);
+  fclose(fl);
 
   Reset(&gc);
-  Exec(gc, memsize);
+  U8 ExecExit = Exec(gc, memsize);
+  if (ExecExit) {
+    old_st;
+    return ExecExit;
+  }
 
   old_st;
   return 0;
