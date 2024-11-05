@@ -12,4 +12,5 @@ void set_old_st(struct termios oldt) {
   tcsetattr(STDIN_FILENO, TCSANOW, &newt)
 
 #define old_st set_old_st(oldt)
+#define old_st_legacy system("stty icanon isig iexten echo");
 

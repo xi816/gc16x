@@ -1,7 +1,9 @@
+#!/bin/bash
+
 set -xe
 
 build() {
-  gcc src/main.c -Ilib -o gc16;
+  gcc core/main.c -Ilib -o gc16;
 }
 
 build;

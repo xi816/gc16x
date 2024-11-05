@@ -6,12 +6,12 @@
 #include <termios.h>
 
 #include <holyc-types.h>
-#include <cpu16/cpu16.h>
 #include <sterm-control.h>
+#include <cpu16/cpu16.h>
 
 U8 main(I32 argc, I8** argv) {
-  new_st;
   const U32 memsize = 65536;
+  new_st;
 
   parseArgs:
   if (argc == 1) {
