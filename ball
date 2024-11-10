@@ -2,23 +2,31 @@
 # Build all of the programs
 
 # Show executed commands
-set -xe
+# set -xe
+
+buildin_bro() {
+  echo -e "Building \e[32m$1\e[0m..."
+}
 
 # Build the CGovnOS virtual machine (Govno Core 16X)
+buildin_bro "CGovnOS";
 ./build
 
 # Build mkfs.govnfs
-cd src/mkfs.govnfs/
+buildin_bro "mkfs.govnfs";
+cd core/mkfs.govnfs/
 ./build
 cd ../../
 
 # Build gboot
-cd src/gboot/
+buildin_bro "gboot";
+cd core/gboot/
 ./build
 cd ../../
 
 # Build GASMAN
-cd src/gasman/
+buildin_bro "GASMAN";
+cd core/gasman/
 ./build
 cd ../../
 

@@ -1,7 +1,5 @@
 #!/bin/bash
 
-set -xe
-
 build() {
   gcc core/main.c -Ilib -o gc16;
 }
