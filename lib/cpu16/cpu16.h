@@ -221,12 +221,12 @@ U8 LDL1(GC* gc) {   // 9DH
 U8 INT (GC* gc) {   // C2H
   switch (ReadByte(*gc, gc->r.PC+1)) {
     case 0x00: {
-      old_st_legacy;
-      exit(StackPop(gc));
-    }
+                 old_st_legacy;
+                 exit(StackPop(gc));
+               }
     case 0x02: {
-      putchar(StackPop(gc));
-    }
+                 putchar(StackPop(gc));
+               }
   }
   gc->r.PC += 2;
   return 0;
@@ -236,6 +236,7 @@ U8 NOP(GC* gc) {    // EAH
   return 0;
 }
 
+// Page 00h instructions
 U8 (*insts[256])() = {
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &PUSH0, &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
