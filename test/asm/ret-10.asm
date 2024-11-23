@@ -1,4 +1,4 @@
 main:
-  push    0Ah
+  push    [0A]
   int     02h
 

@@ -2,23 +2,25 @@
 
 import sys;
 
-T_INS = 0x00;
-T_INT = 0x01;
-T_BYT = 0x02;
-T_LAB = 0x03;
-T_REG = 0x04;
-T_0ID = 0x05;
-T_CHR = 0x06;
-T_EOL = 0x07;
-T_EOF = 0xFF;
+T_INS   = 0x00;
+T_INT   = 0x01;
+T_BYT   = 0x02;
+T_LAB   = 0x03;
+T_REG   = 0x04;
+T_0ID   = 0x05;
+T_CHR   = 0x06;
+T_REG   = 0x07;
+T_ADDR  = 0x08;
+T_EOL   = 0x09;
+T_EOF   = 0xFF;
 
 LET    = "abcdefghijklmnopqrstuvwxyz";
 DIG    = "0123456789";
 WHI    = " \r\n\0";
 DIGEXT = "0123456789ABCDEF";
-KEY    = [
-  "push", "int"
-];
+KEY1   = ["nop"];
+KEY2   = ["push", "int"];
+KEYR   = ["a", "b", "c", "d", "s", "g", "h", "l", "sp", "bp"];
 
 # Lexer:
 def Lex(prog: str):
@@ -62,11 +64,17 @@ def Lex(prog: str):
       buf = "";
     elif (prog[pos] in WHI):
       pos += 1;
-    elif (prog[pos] == "%"):
-      basemode = 16;
+    elif (prog[pos] == "["):
       pos += 1;
-    elif (prog[pos] == "#"):
-      basemode = 8;
+      while (prog[pos] != "]"):
+        buf += prog[pos];
+        pos += 1;
+      if (prog[pos-1] == "d"):
+        toks.append((T_ADDR, int(buf[:-1], base=10)));
+      else:
+        toks.append((T_ADDR, int(buf[:-1], base=16)));
+      input();
+      buf = "";
       pos += 1;
     elif (prog[pos] == "\n"):
       bytesmode = 1;
@@ -91,7 +99,10 @@ def Lex(prog: str):
         toks.append((T_LAB, buf, cpos));
         pos += 1;
       else:
-        if (buf in KEY):
+        if (buf in KEY2):
+          toks.append((T_INS, buf, cpos));
+          cpos += 2;
+        elif (buf in KEY1):
           toks.append((T_INS, buf, cpos));
           cpos += 1;
         elif (buf == "bytes"):
@@ -146,16 +157,23 @@ def CompileGC16X(prog: list, labs: dict):
       if (prog[pos][1] == "push"):
         pos += 1;
         if (prog[pos][0] == T_INT):
-          code.append(0x19);
+          code.append(0x0F);
+          code.append(0x84);
           code.append(prog[pos][1] >> 8);
           code.append(prog[pos][1] % 256);
         elif (prog[pos][0] == T_0ID):
           val = labs[prog[pos][1]];
-          code.append(0x19);
+          code.append(0x0F);
+          code.append(0x84);
           code.append(val >> 8);
           code.append(val % 256);
+        elif (prog[pos][0] == T_ADDR):
+          code.append(0x0F);
+          code.append(0x89);
+          code.append(prog[pos][1] >> 8);
+          code.append(prog[pos][1] % 256);
         else:
-          printf("ERROR: `push` instruction can only take immediate values or labels");
+          print("ERROR: `push` instruction can only take immediate values or labels");
           return 1;
         pos += 1;
       elif (prog[pos][1] == "int"):
@@ -164,8 +182,8 @@ def CompileGC16X(prog: list, labs: dict):
           code.append(0xC2);
           code.append(prog[pos][1] % 256);
         else:
-          printf("ERROR: `int` instruction can only take byte-long immediate values");
-          return 1;
+          print("ERROR: `int` instruction can only take byte-long immediate values");
+          return code, 1;
         pos += 1;
       else:
         print(f"\033[31mUnknown\033[0m instruction {prog[pos][1]}");

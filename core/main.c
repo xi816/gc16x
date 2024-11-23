@@ -10,7 +10,6 @@
 #include <cpu16/cpu16.h>
 
 U8 main(I32 argc, I8** argv) {
-  const U32 memsize = 65536;
   new_st;
 
   parseArgs:
@@ -37,7 +36,7 @@ U8 main(I32 argc, I8** argv) {
   fclose(fl);
 
   Reset(&gc);
-  U8 ExecExit = Exec(gc, memsize);
+  U8 ExecExit = Exec(gc, MEMSIZE);
   if (ExecExit) {
     old_st;
     return ExecExit;

@@ -1,5 +1,6 @@
 // CPU identificator: GC16X
 #include <cpu16/inst.h>
+#include <cpu16/proc/std.h>
 #define MEMSIZE 65536 // Maximum for a 16-bit cpu
 
 struct Regs {
@@ -8,6 +9,7 @@ struct Regs {
   U16 C;  // Counter
   U16 D;  // Data
   U16 S;  // Segment (address)
+  U16 G;  // Segment #2 (address)
   U8  H;  // High 8 bits
   U8  L;  // Low 8 bits
   U16 SP; // Stack pointer
@@ -35,10 +37,10 @@ U16 ReadReg(GC gc, U8 regid) {
   // {REG} addressing instruction. It
   // can only be changed using JMP, CALL,
   // and other control flow instructions.
-  U16* regids[9] = {
+  U16* regids[10] = {
     &(gc.r.A), &(gc.r.B), &(gc.r.C), &(gc.r.D),
-    &(gc.r.S), (U16*)&(gc.r.H), (U16*)&(gc.r.L), &(gc.r.SP),
-    &(gc.r.BP)
+    &(gc.r.S), &(gc.r.G), (U16*)&(gc.r.H),
+    (U16*)&(gc.r.L), &(gc.r.SP), &(gc.r.BP)
   };
   return *regids[regid];
 }
@@ -46,7 +48,6 @@ U16 ReadReg(GC gc, U8 regid) {
 U8 StackPush(GC* gc, U16 val) {
   gc->mem[gc->r.SP--] = (val << 8);
   gc->mem[gc->r.SP--] = (val % 256);
-  printf("NEW SP: %04X\n", gc->r.SP);
   return 0;
 }
 
@@ -61,16 +62,6 @@ U8 UNK(GC* gc) {    // Unknown instruction
   return 1;
 }
 
-U8 PUSH0(GC* gc) {   // 19H
-  for (U16 i = 0x0000; i < 0x0010; i++) {
-    printf("%02X ", gc->mem[i]);
-  }
-  putchar(10);
-  StackPush(gc, ReadWord(*gc, gc->r.PC+1));
-  gc->r.PC += 3;
-  return 0;
-}
-
 U8 JMP0(GC* gc) {   // 30H
   gc->r.PC = ReadWord(*gc, gc->r.PC+1);
   return 0;
@@ -81,173 +72,213 @@ U8 JMP1(GC* gc) {   // 31H
   return 0;
 }
 
-U8 JMP2(GC* gc) {   // 32H
+U8 JMP2(GC* gc) {   // 32
   gc->r.PC = gc->mem[ReadWord(*gc, gc->r.PC+1)];
   return 0;
 }
 
-U8 LDA0(GC* gc) {   // 55H
+U8 LDA0(GC* gc) {   // 66 05
   gc->r.A = ReadWord(*gc, gc->r.PC+1);
   gc->r.PC += 3;
   return 0;
 }
 
-U8 LDB0(GC* gc) {   // 56H
+U8 LDB0(GC* gc) {   // 66 06
   gc->r.B = ReadWord(*gc, gc->r.PC+1);
   gc->r.PC += 3;
   return 0;
 }
 
-U8 LDC0(GC* gc) {   // 57H
+U8 LDC0(GC* gc) {   // 66 07
   gc->r.C = ReadWord(*gc, gc->r.PC+1);
   gc->r.PC += 3;
   return 0;
 }
 
-U8 LDD0(GC* gc) {   // 58H
+U8 LDD0(GC* gc) {   // 66 08
   gc->r.D = ReadWord(*gc, gc->r.PC+1);
   gc->r.PC += 3;
   return 0;
 }
 
-U8 LDS0(GC* gc) {   // 59H
+U8 LDS0(GC* gc) {   // 66 09
   gc->r.S = ReadWord(*gc, gc->r.PC+1);
   gc->r.PC += 3;
   return 0;
 }
 
-U8 LDH0(GC* gc) {   // 5AH
+U8 LDG0(GC* gc) {   // 66 0A
+  gc->r.G = ReadWord(*gc, gc->r.PC+1);
+  gc->r.PC += 3;
+  return 0;
+}
+
+U8 LDH0(GC* gc) {   // 66 0B
   gc->r.H = ReadByte(*gc, gc->r.PC+1);
   gc->r.PC += 3;
   return 0;
 }
 
-U8 LDL0(GC* gc) {   // 5AH
+U8 LDL0(GC* gc) {   // 66 0C
   gc->r.L = ReadByte(*gc, gc->r.PC+1);
   gc->r.PC += 3;
   return 0;
 }
 
-U8 LDA2(GC* gc) {   // 65H
+U8 LDA2(GC* gc) {   // 66 92
   gc->r.A = gc->mem[ReadWord(*gc, gc->r.PC+1)];
   gc->r.PC += 3;
   return 0;
 }
 
-U8 LDB2(GC* gc) {   // 66H
+U8 LDB2(GC* gc) {   // 66 93
   gc->r.B = gc->mem[ReadWord(*gc, gc->r.PC+1)];
   gc->r.PC += 3;
   return 0;
 }
 
-U8 LDC2(GC* gc) {   // 67H
+U8 LDC2(GC* gc) {   // 66 94
   gc->r.C = gc->mem[ReadWord(*gc, gc->r.PC+1)];
   gc->r.PC += 3;
   return 0;
 }
 
-U8 LDD2(GC* gc) {   // 68H
+U8 LDD2(GC* gc) {   // 66 95
   gc->r.D = gc->mem[ReadWord(*gc, gc->r.PC+1)];
   gc->r.PC += 3;
   return 0;
 }
 
-U8 LDS2(GC* gc) {   // 69H
+U8 LDS2(GC* gc) {   // 66 96
   gc->r.S = gc->mem[ReadWord(*gc, gc->r.PC+1)];
   gc->r.PC += 3;
   return 0;
 }
 
-U8 LDH2(GC* gc) {   // 6AH
+U8 LDG2(GC* gc) {   // 66 97
+  gc->r.G = gc->mem[ReadWord(*gc, gc->r.PC+1)];
+  gc->r.PC += 3;
+  return 0;
+}
+
+U8 LDH2(GC* gc) {   // 66 98
   gc->r.H = gc->mem[ReadByte(*gc, gc->r.PC+1)];
   gc->r.PC += 2;
   return 0;
 }
 
-U8 LDL2(GC* gc) {   // 6BH
+U8 LDL2(GC* gc) {   // 66 99
   gc->r.L = gc->mem[ReadByte(*gc, gc->r.PC+1)];
   gc->r.PC += 2;
   return 0;
 }
 
-U8 PUSH1(GC* gc) {  // 90H
-  StackPush(gc, ReadReg(*gc, gc->mem[gc->r.PC+1]));
-  gc->r.PC += 2;
-  return 0;
-}
-
-U8 LDA1(GC* gc) {   // 97H
+U8 LDA1(GC* gc) {   // 66 41
   gc->r.A = ReadReg(*gc, gc->mem[gc->r.PC+1]);
   gc->r.PC += 2;
   return 0;
 }
 
-U8 LDB1(GC* gc) {   // 98H
+U8 LDB1(GC* gc) {   // 66 42
   gc->r.B = ReadReg(*gc, gc->mem[gc->r.PC+1]);
   gc->r.PC += 2;
   return 0;
 }
 
-U8 LDC1(GC* gc) {   // 99H
+U8 LDC1(GC* gc) {   // 66 43
   gc->r.C = ReadReg(*gc, gc->mem[gc->r.PC+1]);
   gc->r.PC += 2;
   return 0;
 }
 
-U8 LDD1(GC* gc) {   // 9AH
+U8 LDD1(GC* gc) {   // 66 44
   gc->r.D = ReadReg(*gc, gc->mem[gc->r.PC+1]);
   gc->r.PC += 2;
   return 0;
 }
 
-U8 LDS1(GC* gc) {   // 9BH
+U8 LDS1(GC* gc) {   // 66 45
   gc->r.S = ReadReg(*gc, gc->mem[gc->r.PC+1]);
   gc->r.PC += 2;
   return 0;
 }
 
-U8 LDH1(GC* gc) {   // 9CH
+U8 LDG1(GC* gc) {   // 66 46
+  gc->r.G = ReadReg(*gc, gc->mem[gc->r.PC+1]);
+  gc->r.PC += 2;
+  return 0;
+}
+
+U8 LDH1(GC* gc) {   // 66 47
   gc->r.H = ReadReg(*gc, gc->mem[gc->r.PC+1]) % 256;
   gc->r.PC += 2;
   return 0;
 }
 
-U8 LDL1(GC* gc) {   // 9DH
+U8 LDL1(GC* gc) {   // 66 48
   gc->r.L = ReadReg(*gc, gc->mem[gc->r.PC+1]) % 256;
   gc->r.PC += 2;
   return 0;
 }
 
-U8 INT (GC* gc) {   // C2H
-  switch (ReadByte(*gc, gc->r.PC+1)) {
+U8 PUSH0(GC* gc) {  // 0F 84
+  StackPush(gc, ReadWord(*gc, gc->r.PC+1));
+  gc->r.PC += 3;
+  return 0;
+}
+
+U8 PUSH1(GC* gc) {  // 0F 90
+  StackPush(gc, ReadReg(*gc, gc->mem[gc->r.PC+1]));
+  gc->r.PC += 2;
+  return 0;
+}
+
+U8 CPUID(GC* gc) {  // 0F E9
+  switch (gc->r.D) {
     case 0x00: {
-                 old_st_legacy;
-                 exit(StackPop(gc));
-               }
-    case 0x02: {
-                 putchar(StackPop(gc));
-               }
+      return PROC_TYPE_GC16X;
+    }
+    default:
+      fputs("Illegal CPUID value", stderr);
+      return 1;
   }
   gc->r.PC += 2;
   return 0;
 }
 
-U8 NOP(GC* gc) {    // EAH
+U8 INT(GC* gc) {   // C2
+  switch (ReadByte(*gc, gc->r.PC+1)) {
+    case 0x00: {
+      old_st_legacy;
+      exit(StackPop(gc));
+    }
+    case 0x02: {
+      putchar(StackPop(gc));
+    }
+  }
+  gc->r.PC += 2;
   return 0;
 }
 
+U8 NOP(GC* gc) {    // EA
+  return 0;
+}
+
+U8 PG0F(GC*);
+U8 PG66(GC*);
+
 // Page 00h instructions
-U8 (*insts[256])() = {
-  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+U8 (*INSTS[256])() = {
+  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &PG0F ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &PUSH0, &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &JMP0 , &JMP1 , &JMP2 , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
-  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &LDA0 , &LDB0 , &LDC0 , &LDD0 , &LDS0 , &LDH0 , &LDL0 , &UNK  , &UNK  , &UNK  , &UNK  ,
-  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &LDA2 , &LDB2 , &LDC2 , &LDD2 , &LDS2 , &LDH2 , &LDL2 , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &PG66 , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
-  &PUSH1, &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &LDA1 , &LDB1 , &LDC1 , &LDD1 , &LDS1 , &LDH1 , &LDL1 , &UNK  , &UNK  ,
+  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &INT  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
@@ -255,6 +286,58 @@ U8 (*insts[256])() = {
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &NOP  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK
 };
+
+U8 (*INSTS_PG0F[256])() = {
+  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &UNK  , &UNK  , &UNK  , &UNK  , &PUSH0, &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &PUSH1, &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &CPUID, &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK
+};
+
+U8 (*INSTS_PG66[256])() = {
+  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &LDA0 , &LDB0 , &LDC0 , &LDD0 , &LDS0 , &LDG0 , &LDH0 , &LDL0 , &UNK  , &UNK  , &UNK  ,
+  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &UNK  , &LDA1 , &LDB1 , &LDC1 , &LDD1 , &LDS1 , &LDG1 , &LDH1 , &LDL1 , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &UNK  , &UNK  , &LDA2 , &LDB2 , &LDC2 , &LDD2 , &LDS2 , &LDG2 , &LDH2 , &LDL2 , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK
+};
+
+U8 PG0F(GC* gc) {   // 0FH
+  puts("Page 0F instruction.");
+  printf("%02X %02X\n", gc->mem[gc->r.PC], gc->mem[gc->r.PC+1]);
+  gc->r.PC++;
+  return (INSTS_PG0F[gc->mem[gc->r.PC]])(gc);
+}
+
+U8 PG66(GC* gc) {   // 66H
+  puts("Page 66 instruction.");
+  printf("%02X %02X\n", gc->mem[gc->r.PC], gc->mem[gc->r.PC+1]);
+  gc->r.PC++;
+  return (INSTS_PG66[gc->mem[gc->r.PC]])(gc);
+}
 
 U0 Reset(GC* gc) {
   gc->r.SP = 0x1000;
@@ -275,6 +358,7 @@ U0 RegDump(GC gc) {
   printf("C:  %04X\n", gc.r.C);
   printf("D:  %04X\n", gc.r.D);
   printf("S:  %04X\n", gc.r.S);
+  printf("G:  %04X\n", gc.r.G);
   printf("H:  %02X\n", gc.r.H);
   printf("L:  %02X\n", gc.r.L);
   printf("SP: %04X\n", gc.r.SP);
@@ -288,9 +372,9 @@ U8 Exec(GC gc, const U32 memsize) {
     // printf("\033[32m%04X\033[0m\n", gc.r.PC);
     getchar();
     // printf("\033[32mExecuting\033[0m\n", gc.r.PC);
-    exc = (insts[gc.mem[gc.r.PC]])(&gc);
-    StackDump(gc);
-    RegDump(gc);
+    exc = (INSTS[gc.mem[gc.r.PC]])(&gc);
+    // StackDump(gc);
+    // RegDump(gc);
   }
   return exc;
 }
