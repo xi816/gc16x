@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import sys;
+import time;
 
 T_INS   = 0x00;
 T_INT   = 0x01;
@@ -19,8 +20,16 @@ DIG    = "0123456789";
 WHI    = " \r\n\0";
 DIGEXT = "0123456789ABCDEF";
 KEY1   = ["nop"];
-KEY2   = ["push", "int"];
+KEY2   = ["push", "int", "lda"];
 KEYR   = ["a", "b", "c", "d", "s", "g", "h", "l", "sp", "bp"];
+
+# Uwunny bar
+def funny_bar(msg: str) -> None:
+  print(f"{msg}...\033[?25l");
+  for i in range(20):
+    print(f"  [{'#'*i}{' '*(19-i)}]", end="\r");
+    time.sleep(0.03);
+  print(f"\033[?25h");
 
 # Lexer:
 def Lex(prog: str):
@@ -36,7 +45,6 @@ def Lex(prog: str):
     if (prog[pos] == "\0"):
       toks.append((T_EOL,));
       toks.append((T_EOF,));
-      print(toks);
       return toks, 0;
     elif (prog[pos] == ";"):
       pos += 1;
@@ -71,8 +79,10 @@ def Lex(prog: str):
         pos += 1;
       if (prog[pos-1] == "d"):
         toks.append((T_ADDR, int(buf[:-1], base=10)));
-      else:
+      elif (prog[pos-1] == "h"):
         toks.append((T_ADDR, int(buf[:-1], base=16)));
+      else:
+        toks.append((T_ADDR, int(buf[:-1], base=10)));
       input();
       buf = "";
       pos += 1;
@@ -84,10 +94,14 @@ def Lex(prog: str):
       while (prog[pos] in DIGEXT):
         buf += prog[pos];
         pos += 1;
-      if (prog[pos] == "d"):
-        toks.append((T_INT, int(buf, base=10)));
-      elif (prog[pos] == "h"):
+      if (prog[pos] == "h"):
         toks.append((T_INT, int(buf, base=16)));
+      elif (prog[pos] == "d"):
+        toks.append((T_INT, int(buf, base=10)));
+      elif (prog[pos] == "o"):
+        toks.append((T_INT, int(buf, base=8)));
+      else:
+        toks.append((T_INT, int(buf, base=10)));
       pos += 1;
       buf = "";
       cpos += 1+bytesmode;
@@ -102,12 +116,15 @@ def Lex(prog: str):
         if (buf in KEY2):
           toks.append((T_INS, buf, cpos));
           cpos += 2;
-        elif (buf in KEY1):
-          toks.append((T_INS, buf, cpos));
+        elif (buf in KEYR):
+          toks.append((T_REG, KEYR.index(buf), cpos));
           cpos += 1;
         elif (buf == "bytes"):
           toks.append((T_BYT, cpos));
           bytesmode = 0;
+        elif (buf in KEY1):
+          toks.append((T_INS, buf, cpos));
+          cpos += 1;
         else:
           toks.append((T_0ID, buf));
           cpos += 2;
@@ -159,7 +176,11 @@ def CompileGC16X(prog: list, labs: dict):
         if (prog[pos][0] == T_INT):
           code.append(0x0F);
           code.append(0x84);
+          code.append(prog[pos][1] % 256);
           code.append(prog[pos][1] >> 8);
+        elif (prog[pos][0] == T_REG):
+          code.append(0x0F);
+          code.append(0x90);
           code.append(prog[pos][1] % 256);
         elif (prog[pos][0] == T_0ID):
           val = labs[prog[pos][1]];
@@ -170,8 +191,8 @@ def CompileGC16X(prog: list, labs: dict):
         elif (prog[pos][0] == T_ADDR):
           code.append(0x0F);
           code.append(0x89);
-          code.append(prog[pos][1] >> 8);
           code.append(prog[pos][1] % 256);
+          code.append(prog[pos][1] >> 8);
         else:
           print("ERROR: `push` instruction can only take immediate values or labels");
           return 1;
@@ -179,10 +200,36 @@ def CompileGC16X(prog: list, labs: dict):
       elif (prog[pos][1] == "int"):
         pos += 1;
         if (prog[pos][0] == T_INT):
+          code.append(0x0F);
           code.append(0xC2);
           code.append(prog[pos][1] % 256);
+        elif (prog[pos][0] == T_REG):
+          code.append(0x0F);
+          code.append(0xC3);
+          code.append(prog[pos][1] % 256);
         else:
-          print("ERROR: `int` instruction can only take byte-long immediate values");
+          print("ERROR: `int` instruction can only take byte-long immediate values or registers");
+          return code, 1;
+        pos += 1;
+      elif (prog[pos][1] == "lda"):
+        pos += 1;
+        if (prog[pos][0] == T_INT):
+          code.append(0x66);
+          code.append(0x05);
+          code.append(prog[pos][1] % 256);
+          code.append(prog[pos][1] >> 8);
+        elif (prog[pos][0] == T_REG):
+          code.append(0x66);
+          code.append(0x41);
+          code.append(prog[pos][1] % 256);
+          code.append(prog[pos][1] >> 8);
+        elif (prog[pos][0] == T_ADDR):
+          code.append(0x66);
+          code.append(0x92);
+          code.append(prog[pos][1] % 256);
+          code.append(prog[pos][1] >> 8);
+        else:
+          print(f"`lda` can only take immediate words, registers, or immediate addresses");
           return code, 1;
         pos += 1;
       else:
@@ -196,20 +243,35 @@ def CompileGC16X(prog: list, labs: dict):
   return code, 0;
 
 def main(argc: int, argv: list) -> int:
+  jwm = False;
   if (argc == 1):
     print("No arguments given");
     return 1;
   elif (argc == 2):
     print("No binary filename given");
     return 1;
-  progname = argv[1];
-  outname = argv[2];
+  if (argc == 3):
+    progname = argv[1];
+    outname = argv[2];
+  elif (argc == 4):
+    if (argv[1] == "-jwm"):
+      jwm = True;
+    else:
+      print(f"\033[31mUnknown\033[0m argument `{argv[1]}`");
+      return 1;
+    progname = argv[2];
+    outname = argv[3];
 
+  if (jwm): funny_bar("Loading file");
   with open(progname, "r") as fl:
     src = fl.read();
+  if (jwm): funny_bar("Removing empty lines");
   src = RemEmpty(src)+"\0";
+  if (jwm): funny_bar("Lexing");
   tokens, exitcode = Lex(src);
+  if (jwm): funny_bar("Compiling");
   c, exitcode = CompileGC16X(tokens, FetchLabels(tokens));
+  if (jwm): funny_bar("Writing to a file");
   with open(outname, "wb") as fl:
     fl.write(c);
 

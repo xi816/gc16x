@@ -32,7 +32,7 @@ U16 ReadWord(GC gc, U16 addr) {
   return (gc.mem[addr]) + (gc.mem[addr+1] << 8);
 }
 
-U16 ReadReg(GC gc, U8 regid) {
+U16* ReadReg(GC gc, U8 regid) {
   // PC register cannot be changed from
   // {REG} addressing instruction. It
   // can only be changed using JMP, CALL,
@@ -42,7 +42,7 @@ U16 ReadReg(GC gc, U8 regid) {
     &(gc.r.S), &(gc.r.G), (U16*)&(gc.r.H),
     (U16*)&(gc.r.L), &(gc.r.SP), &(gc.r.BP)
   };
-  return *regids[regid];
+  return regids[regid];
 }
 
 U8 StackPush(GC* gc, U16 val) {
@@ -68,7 +68,7 @@ U8 JMP0(GC* gc) {   // 30H
 }
 
 U8 JMP1(GC* gc) {   // 31H
-  gc->r.PC = ReadReg(*gc, gc->r.PC+1);
+  gc->r.PC = *ReadReg(*gc, gc->r.PC+1);
   return 0;
 }
 
@@ -174,49 +174,49 @@ U8 LDL2(GC* gc) {   // 66 99
 }
 
 U8 LDA1(GC* gc) {   // 66 41
-  gc->r.A = ReadReg(*gc, gc->mem[gc->r.PC+1]);
+  gc->r.A = *ReadReg(*gc, gc->mem[gc->r.PC+1]);
   gc->r.PC += 2;
   return 0;
 }
 
 U8 LDB1(GC* gc) {   // 66 42
-  gc->r.B = ReadReg(*gc, gc->mem[gc->r.PC+1]);
+  gc->r.B = *ReadReg(*gc, gc->mem[gc->r.PC+1]);
   gc->r.PC += 2;
   return 0;
 }
 
 U8 LDC1(GC* gc) {   // 66 43
-  gc->r.C = ReadReg(*gc, gc->mem[gc->r.PC+1]);
+  gc->r.C = *ReadReg(*gc, gc->mem[gc->r.PC+1]);
   gc->r.PC += 2;
   return 0;
 }
 
 U8 LDD1(GC* gc) {   // 66 44
-  gc->r.D = ReadReg(*gc, gc->mem[gc->r.PC+1]);
+  gc->r.D = *ReadReg(*gc, gc->mem[gc->r.PC+1]);
   gc->r.PC += 2;
   return 0;
 }
 
 U8 LDS1(GC* gc) {   // 66 45
-  gc->r.S = ReadReg(*gc, gc->mem[gc->r.PC+1]);
+  gc->r.S = *ReadReg(*gc, gc->mem[gc->r.PC+1]);
   gc->r.PC += 2;
   return 0;
 }
 
 U8 LDG1(GC* gc) {   // 66 46
-  gc->r.G = ReadReg(*gc, gc->mem[gc->r.PC+1]);
+  gc->r.G = *ReadReg(*gc, gc->mem[gc->r.PC+1]);
   gc->r.PC += 2;
   return 0;
 }
 
 U8 LDH1(GC* gc) {   // 66 47
-  gc->r.H = ReadReg(*gc, gc->mem[gc->r.PC+1]) % 256;
+  gc->r.H = *ReadReg(*gc, gc->mem[gc->r.PC+1]) % 256;
   gc->r.PC += 2;
   return 0;
 }
 
 U8 LDL1(GC* gc) {   // 66 48
-  gc->r.L = ReadReg(*gc, gc->mem[gc->r.PC+1]) % 256;
+  gc->r.L = *ReadReg(*gc, gc->mem[gc->r.PC+1]) % 256;
   gc->r.PC += 2;
   return 0;
 }
@@ -228,7 +228,7 @@ U8 PUSH0(GC* gc) {  // 0F 84
 }
 
 U8 PUSH1(GC* gc) {  // 0F 90
-  StackPush(gc, ReadReg(*gc, gc->mem[gc->r.PC+1]));
+  StackPush(gc, *ReadReg(*gc, gc->mem[gc->r.PC+1]));
   gc->r.PC += 2;
   return 0;
 }
@@ -246,18 +246,38 @@ U8 CPUID(GC* gc) {  // 0F E9
   return 0;
 }
 
-U8 INT(GC* gc) {   // C2
-  switch (ReadByte(*gc, gc->r.PC+1)) {
+U8 INT(GC* gc, bool ri) {   // C2
+  char val;
+  if (ri) {
+    val = *ReadReg(*gc, ReadByte(*gc, gc->r.PC+1));
+    printf("Register interrupt: %02X\n", val);
+  }
+  else {
+    val = ReadByte(*gc, gc->r.PC+1);
+  }
+  switch (val) {
     case 0x00: {
       old_st_legacy;
       exit(StackPop(gc));
     }
     case 0x02: {
       putchar(StackPop(gc));
+      break;
     }
+    default:
+      printf("Unknown interrupt %02X\n", val);
+      return 1;
   }
   gc->r.PC += 2;
   return 0;
+}
+
+U8 INT0(GC* gc) {
+  return INT(gc, false);
+}
+
+U8 INT1(GC* gc) {
+  return INT(gc, true);
 }
 
 U8 NOP(GC* gc) {    // EA
@@ -281,7 +301,7 @@ U8 (*INSTS[256])() = {
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
-  &UNK  , &UNK  , &INT  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &NOP  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK
@@ -300,7 +320,7 @@ U8 (*INSTS_PG0F[256])() = {
   &PUSH1, &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
-  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &UNK  , &UNK  , &INT0 , &INT1 , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &CPUID, &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK
@@ -326,15 +346,15 @@ U8 (*INSTS_PG66[256])() = {
 };
 
 U8 PG0F(GC* gc) {   // 0FH
-  puts("Page 0F instruction.");
-  printf("%02X %02X\n", gc->mem[gc->r.PC], gc->mem[gc->r.PC+1]);
+  // puts("Page 0F instruction.");
+  // printf("%02X %02X\n", gc->mem[gc->r.PC], gc->mem[gc->r.PC+1]);
   gc->r.PC++;
   return (INSTS_PG0F[gc->mem[gc->r.PC]])(gc);
 }
 
 U8 PG66(GC* gc) {   // 66H
-  puts("Page 66 instruction.");
-  printf("%02X %02X\n", gc->mem[gc->r.PC], gc->mem[gc->r.PC+1]);
+  // puts("Page 66 instruction.");
+  // printf("%02X %02X\n", gc->mem[gc->r.PC], gc->mem[gc->r.PC+1]);
   gc->r.PC++;
   return (INSTS_PG66[gc->mem[gc->r.PC]])(gc);
 }
@@ -370,7 +390,7 @@ U8 Exec(GC gc, const U32 memsize) {
   U8 exc = 0;
   while (!exc) {
     // printf("\033[32m%04X\033[0m\n", gc.r.PC);
-    getchar();
+    // getchar();
     // printf("\033[32mExecuting\033[0m\n", gc.r.PC);
     exc = (INSTS[gc.mem[gc.r.PC]])(&gc);
     // StackDump(gc);
