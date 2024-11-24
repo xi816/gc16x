@@ -8,7 +8,7 @@ The `./ball` script compiles all of the programs included in this repo: CGovnOS-
 For only compiling CGovnOS-GC16X you can use the `./build` script. (`kasm` assembler will not be build as it is written in python).
 
 2. Write assembly code (GovnASM) and compile it to binary\
-Now you can start writing assembly code. For example, create a file called `test.asm`:\
+Now you can start writing assembly code. For example, create a file called `test.asm`:
 ```asm
 main:
   push 50h
