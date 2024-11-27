@@ -16,7 +16,12 @@ struct Regs {
   U16 BP; // Base pointer
   U16 PC; // Program counter
 };
+struct RegClust {
+  U8 x;
+  U8 y;
+};
 typedef struct Regs Regs;
+typedef struct RegClust RegClust;
 
 struct GC16X {
   Regs r;
@@ -56,18 +61,97 @@ U16 StackPop(GC* gc) {
   return ReadWord(*gc, gc->r.SP-1);
 }
 
+RegClust ReadRegClust(U8 clust) { // Read a register cluster
+  RegClust rc = {clust/12, clust%12};
+  printf("Register cluster: (%02X) %02X:%02X\n", clust, rc.x, rc.y);
+  return rc;
+}
+
 U8 UNK(GC* gc) {    // Unknown instruction
   fprintf(stderr, "Unknown instruction %02X\nAt position %04X\n", gc->mem[gc->r.PC], gc->r.PC);
   old_st_legacy;
   return 1;
 }
 
-U8 JMP0(GC* gc) {   // 30H
+U8 PUSH0(GC* gc) {  // 0F 84
+  StackPush(gc, ReadWord(*gc, gc->r.PC+1));
+  gc->r.PC += 3;
+  return 0;
+}
+
+U8 PUSH1(GC* gc) {  // 0F 90
+  StackPush(gc, *ReadReg(*gc, gc->mem[gc->r.PC+1]));
+  gc->r.PC += 2;
+  return 0;
+}
+
+U8 CPUID(GC* gc) {  // 0F E9
+  switch (gc->r.D) {
+    case 0x00: {
+      return PROC_TYPE_GC16X;
+    }
+    default:
+      fputs("Illegal CPUID value", stderr);
+      return 1;
+  }
+  gc->r.PC += 1;
+  return 0;
+}
+
+U8 ADDA1(GC* gc) {  // 10 00
+  gc->r.A += *ReadReg(*gc, gc->mem[gc->r.PC+1]);
+  gc->r.PC += 2;
+  return 0;
+}
+
+U8 ADDB1(GC* gc) {  // 10 01
+  gc->r.B += *ReadReg(*gc, gc->mem[gc->r.PC+1]);
+  gc->r.PC += 2;
+  return 0;
+}
+
+U8 ADDC1(GC* gc) {  // 10 02
+  gc->r.C += *ReadReg(*gc, gc->mem[gc->r.PC+1]);
+  gc->r.PC += 2;
+  return 0;
+}
+
+U8 ADDD1(GC* gc) {  // 10 03
+  gc->r.D += *ReadReg(*gc, gc->mem[gc->r.PC+1]);
+  gc->r.PC += 2;
+  return 0;
+}
+
+U8 ADDS1(GC* gc) {  // 10 04
+  gc->r.S += *ReadReg(*gc, gc->mem[gc->r.PC+1]);
+  gc->r.PC += 2;
+  return 0;
+}
+
+U8 ADDG1(GC* gc) {  // 10 05
+  gc->r.G += *ReadReg(*gc, gc->mem[gc->r.PC+1]);
+  gc->r.PC += 2;
+  return 0;
+}
+
+U8 ADDH1(GC* gc) {  // 10 06
+  gc->r.H += *ReadReg(*gc, gc->mem[gc->r.PC+1]);
+  gc->r.PC += 2;
+  return 0;
+}
+
+U8 ADDL1(GC* gc) {  // 10 07
+  gc->r.L += *ReadReg(*gc, gc->mem[gc->r.PC+1]);
+  gc->r.PC += 2;
+  return 0;
+}
+
+U8 JMP0(GC* gc) {   // 30
   gc->r.PC = ReadWord(*gc, gc->r.PC+1);
   return 0;
 }
 
-U8 JMP1(GC* gc) {   // 31H
+U8 JMP1(GC* gc) {   // 31
   gc->r.PC = *ReadReg(*gc, gc->r.PC+1);
   return 0;
 }
@@ -221,31 +305,6 @@ U8 LDL1(GC* gc) {   // 66 48
   return 0;
 }
 
-U8 PUSH0(GC* gc) {  // 0F 84
-  StackPush(gc, ReadWord(*gc, gc->r.PC+1));
-  gc->r.PC += 3;
-  return 0;
-}
-
-U8 PUSH1(GC* gc) {  // 0F 90
-  StackPush(gc, *ReadReg(*gc, gc->mem[gc->r.PC+1]));
-  gc->r.PC += 2;
-  return 0;
-}
-
-U8 CPUID(GC* gc) {  // 0F E9
-  switch (gc->r.D) {
-    case 0x00: {
-      return PROC_TYPE_GC16X;
-    }
-    default:
-      fputs("Illegal CPUID value", stderr);
-      return 1;
-  }
-  gc->r.PC += 2;
-  return 0;
-}
-
 U8 INT(GC* gc, bool ri) {   // C2
   char val;
   if (ri) {
@@ -284,13 +343,14 @@ U8 NOP(GC* gc) {    // EA
   return 0;
 }
 
-U8 PG0F(GC*);
-U8 PG66(GC*);
+U8 PG0F(GC*); // Page 0F - Stack operations
+U8 PG10(GC*); // Page 10 - Register operations
+U8 PG66(GC*); // Page 66 - Load/Store operations
 
 // Page 00h instructions
 U8 (*INSTS[256])() = {
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &PG0F ,
-  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &PUSH0, &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &PG10 , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &PUSH0, &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &JMP0 , &JMP1 , &JMP2 , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
@@ -326,6 +386,25 @@ U8 (*INSTS_PG0F[256])() = {
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK
 };
 
+U8 (*INSTS_PG10[256])() = {
+  &ADDA1, &ADDB1, &ADDC1, &ADDD1, &ADDS1, &ADDG1, &ADDH1, &ADDL1, &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK
+};
+
 U8 (*INSTS_PG66[256])() = {
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &LDA0 , &LDB0 , &LDC0 , &LDD0 , &LDS0 , &LDG0 , &LDH0 , &LDL0 , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
@@ -346,15 +425,16 @@ U8 (*INSTS_PG66[256])() = {
 };
 
 U8 PG0F(GC* gc) {   // 0FH
-  // puts("Page 0F instruction.");
-  // printf("%02X %02X\n", gc->mem[gc->r.PC], gc->mem[gc->r.PC+1]);
   gc->r.PC++;
   return (INSTS_PG0F[gc->mem[gc->r.PC]])(gc);
 }
 
+U8 PG10(GC* gc) {   // 10H
+  gc->r.PC++;
+  return (INSTS_PG10[gc->mem[gc->r.PC]])(gc);
+}
+
 U8 PG66(GC* gc) {   // 66H
-  // puts("Page 66 instruction.");
-  // printf("%02X %02X\n", gc->mem[gc->r.PC], gc->mem[gc->r.PC+1]);
   gc->r.PC++;
   return (INSTS_PG66[gc->mem[gc->r.PC]])(gc);
 }
