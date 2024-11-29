@@ -20,8 +20,9 @@ DIG    = "0123456789";
 WHI    = " \r\n\0";
 DIGEXT = "0123456789ABCDEF";
 KEY1   = ["nop"];
-KEY2   = ["push", "int", "lda", "ldb", "ldc", "ldd", "lds", "ldg", "ldh", "ldl", "lodsb"];
+KEY2   = ["push", "int", "lda", "ldb", "ldc", "ldd", "lds", "ldg", "ldh", "ldl", "lodsb", "add"];
 KEYR   = ["a", "b", "c", "d", "s", "g", "h", "l", "sp", "bp"];
+regids = ["a", "b", "c", "d", "s", "g", "h", "l"];
 
 # Uwunny bar
 def funny_bar(msg: str) -> None:
@@ -186,8 +187,8 @@ def CompileGC16X(prog: list, labs: dict):
           val = labs[prog[pos][1]];
           code.append(0x0F);
           code.append(0x84);
-          code.append(val >> 8);
           code.append(val % 256);
+          code.append(val >> 8);
         elif (prog[pos][0] == T_ADDR):
           code.append(0x0F);
           code.append(0x89);
@@ -196,6 +197,9 @@ def CompileGC16X(prog: list, labs: dict):
         else:
           print("ERROR: `push` instruction can only take immediate values or labels");
           return 1;
+        pos += 1;
+      elif (prog[pos][1] == "nop"):
+        code.append(0xEA);
         pos += 1;
       elif (prog[pos][1] == "int"):
         pos += 1;
@@ -383,6 +387,21 @@ def CompileGC16X(prog: list, labs: dict):
           print(f"`ldl` can only take immediate words, registers, or immediate addresses");
           return code, 1;
         pos += 1;
+      elif (prog[pos][1] == "add"):
+        pos += 1;
+        if ((prog[pos][0] == T_REG) and (prog[pos+1][0] == T_REG)):
+          code.append(0x10);
+          code.append(prog[pos][1]);
+          code.append(prog[pos+1][1]);
+        elif ((prog[pos][0] == T_REG) and (prog[pos+1][0] == T_INT)):
+          code.append(0x10);
+          code.append(0x08+prog[pos][1]);
+          code.append(prog[pos+1][1] % 256);
+          code.append(prog[pos+1][1] >> 8);
+        else:
+          print(f"`add` can only take RR or RI");
+          return code, 1;
+        pos += 2;
       else:
         print(f"\033[31mUnknown\033[0m instruction {prog[pos][1]}");
         return code, 1;
