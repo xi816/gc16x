@@ -1,7 +1,6 @@
 # CGovnOS - Govno Core 16X
 
 CGovnOS is a virtual machine for the Govno Core 16X processor.
-Test
 
 ## Start
 1. Compile the source code\
