@@ -20,7 +20,7 @@ DIG    = "0123456789";
 WHI    = " \r\n\0";
 DIGEXT = "0123456789ABCDEF";
 KEY1   = ["nop"];
-KEY2   = ["push", "int", "lda"];
+KEY2   = ["push", "int", "lda", "ldb", "ldc", "ldd", "lds", "ldg", "ldh", "ldl", "lodsb"];
 KEYR   = ["a", "b", "c", "d", "s", "g", "h", "l", "sp", "bp"];
 
 # Uwunny bar
@@ -211,6 +211,10 @@ def CompileGC16X(prog: list, labs: dict):
           print("ERROR: `int` instruction can only take byte-long immediate values or registers");
           return code, 1;
         pos += 1;
+      elif (prog[pos][1] == "lodsb"):
+        pos += 1;
+        code.append(0x10);
+        code.append(0x87);
       elif (prog[pos][1] == "lda"):
         pos += 1;
         if (prog[pos][0] == T_INT):
@@ -230,6 +234,153 @@ def CompileGC16X(prog: list, labs: dict):
           code.append(prog[pos][1] >> 8);
         else:
           print(f"`lda` can only take immediate words, registers, or immediate addresses");
+          return code, 1;
+        pos += 1;
+      elif (prog[pos][1] == "ldb"):
+        pos += 1;
+        if (prog[pos][0] == T_INT):
+          code.append(0x66);
+          code.append(0x06);
+          code.append(prog[pos][1] % 256);
+          code.append(prog[pos][1] >> 8);
+        elif (prog[pos][0] == T_REG):
+          code.append(0x66);
+          code.append(0x42);
+          code.append(prog[pos][1] % 256);
+          code.append(prog[pos][1] >> 8);
+        elif (prog[pos][0] == T_ADDR):
+          code.append(0x66);
+          code.append(0x93);
+          code.append(prog[pos][1] % 256);
+          code.append(prog[pos][1] >> 8);
+        else:
+          print(f"`ldb` can only take immediate words, registers, or immediate addresses");
+          return code, 1;
+        pos += 1;
+      elif (prog[pos][1] == "ldc"):
+        pos += 1;
+        if (prog[pos][0] == T_INT):
+          code.append(0x66);
+          code.append(0x07);
+          code.append(prog[pos][1] % 256);
+          code.append(prog[pos][1] >> 8);
+        elif (prog[pos][0] == T_REG):
+          code.append(0x66);
+          code.append(0x43);
+          code.append(prog[pos][1] % 256);
+          code.append(prog[pos][1] >> 8);
+        elif (prog[pos][0] == T_ADDR):
+          code.append(0x66);
+          code.append(0x94);
+          code.append(prog[pos][1] % 256);
+          code.append(prog[pos][1] >> 8);
+        else:
+          print(f"`ldc` can only take immediate words, registers, or immediate addresses");
+          return code, 1;
+        pos += 1;
+      elif (prog[pos][1] == "ldd"):
+        pos += 1;
+        if (prog[pos][0] == T_INT):
+          code.append(0x66);
+          code.append(0x08);
+          code.append(prog[pos][1] % 256);
+          code.append(prog[pos][1] >> 8);
+        elif (prog[pos][0] == T_REG):
+          code.append(0x66);
+          code.append(0x44);
+          code.append(prog[pos][1] % 256);
+          code.append(prog[pos][1] >> 8);
+        elif (prog[pos][0] == T_ADDR):
+          code.append(0x66);
+          code.append(0x95);
+          code.append(prog[pos][1] % 256);
+          code.append(prog[pos][1] >> 8);
+        else:
+          print(f"`ldd` can only take immediate words, registers, or immediate addresses");
+          return code, 1;
+        pos += 1;
+      elif (prog[pos][1] == "lds"):
+        pos += 1;
+        if (prog[pos][0] == T_INT):
+          code.append(0x66);
+          code.append(0x09);
+          code.append(prog[pos][1] % 256);
+          code.append(prog[pos][1] >> 8);
+        elif (prog[pos][0] == T_REG):
+          code.append(0x66);
+          code.append(0x45);
+          code.append(prog[pos][1] % 256);
+          code.append(prog[pos][1] >> 8);
+        elif (prog[pos][0] == T_ADDR):
+          code.append(0x66);
+          code.append(0x96);
+          code.append(prog[pos][1] % 256);
+          code.append(prog[pos][1] >> 8);
+        else:
+          print(f"`lds` can only take immediate words, registers, or immediate addresses");
+          return code, 1;
+        pos += 1;
+      elif (prog[pos][1] == "ldg"):
+        pos += 1;
+        if (prog[pos][0] == T_INT):
+          code.append(0x66);
+          code.append(0x0A);
+          code.append(prog[pos][1] % 256);
+          code.append(prog[pos][1] >> 8);
+        elif (prog[pos][0] == T_REG):
+          code.append(0x66);
+          code.append(0x46);
+          code.append(prog[pos][1] % 256);
+          code.append(prog[pos][1] >> 8);
+        elif (prog[pos][0] == T_ADDR):
+          code.append(0x66);
+          code.append(0x97);
+          code.append(prog[pos][1] % 256);
+          code.append(prog[pos][1] >> 8);
+        else:
+          print(f"`ldg` can only take immediate words, registers, or immediate addresses");
+          return code, 1;
+        pos += 1;
+      elif (prog[pos][1] == "ldh"):
+        pos += 1;
+        if (prog[pos][0] == T_INT):
+          code.append(0x66);
+          code.append(0x0B);
+          code.append(prog[pos][1] % 256);
+          code.append(prog[pos][1] >> 8);
+        elif (prog[pos][0] == T_REG):
+          code.append(0x66);
+          code.append(0x47);
+          code.append(prog[pos][1] % 256);
+          code.append(prog[pos][1] >> 8);
+        elif (prog[pos][0] == T_ADDR):
+          code.append(0x66);
+          code.append(0x98);
+          code.append(prog[pos][1] % 256);
+          code.append(prog[pos][1] >> 8);
+        else:
+          print(f"`ldh` can only take immediate words, registers, or immediate addresses");
+          return code, 1;
+        pos += 1;
+      elif (prog[pos][1] == "ldl"):
+        pos += 1;
+        if (prog[pos][0] == T_INT):
+          code.append(0x66);
+          code.append(0x0C);
+          code.append(prog[pos][1] % 256);
+          code.append(prog[pos][1] >> 8);
+        elif (prog[pos][0] == T_REG):
+          code.append(0x66);
+          code.append(0x48);
+          code.append(prog[pos][1] % 256);
+          code.append(prog[pos][1] >> 8);
+        elif (prog[pos][0] == T_ADDR):
+          code.append(0x66);
+          code.append(0x99);
+          code.append(prog[pos][1] % 256);
+          code.append(prog[pos][1] >> 8);
+        else:
+          print(f"`ldl` can only take immediate words, registers, or immediate addresses");
           return code, 1;
         pos += 1;
       else:
