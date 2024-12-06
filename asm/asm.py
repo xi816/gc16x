@@ -20,7 +20,7 @@ DIG    = "0123456789";
 WHI    = " \r\n\0";
 DIGEXT = "0123456789ABCDEF";
 KEY1   = ["nop"];
-KEY2   = ["push", "int", "lda", "ldb", "ldc", "ldd", "lds", "ldg", "ldh", "ldl", "lodsb", "add"];
+KEY2   = ["push", "int", "lda", "ldb", "ldc", "ldd", "lds", "ldg", "ldh", "ldl", "lodsb", "add", "sub", "mul", "div"];
 KEYR   = ["a", "b", "c", "d", "s", "g", "h", "l", "sp", "bp"];
 regids = ["a", "b", "c", "d", "s", "g", "h", "l"];
 
@@ -399,7 +399,52 @@ def CompileGC16X(prog: list, labs: dict):
           code.append(prog[pos+1][1] % 256);
           code.append(prog[pos+1][1] >> 8);
         else:
-          print(f"`add` can only take RR or RI");
+          print(f"`add` can only take RC or RI");
+          return code, 1;
+        pos += 2;
+      elif (prog[pos][1] == "sub"):
+        pos += 1;
+        if ((prog[pos][0] == T_REG) and (prog[pos+1][0] == T_REG)):
+          code.append(0x10);
+          code.append(0x01);
+          code.append((prog[pos][1]*10)+(prog[pos+1][1]%10));
+        elif ((prog[pos][0] == T_REG) and (prog[pos+1][0] == T_INT)):
+          code.append(0x10);
+          code.append(0x18+prog[pos][1]);
+          code.append(prog[pos+1][1] % 256);
+          code.append(prog[pos+1][1] >> 8);
+        else:
+          print(f"`sub` can only take RC or RI");
+          return code, 1;
+        pos += 2;
+       elif (prog[pos][1] == "mul"):
+        pos += 1;
+        if ((prog[pos][0] == T_REG) and (prog[pos+1][0] == T_REG)):
+          code.append(0x10);
+          code.append(0x02);
+          code.append((prog[pos][1]*10)+(prog[pos+1][1]%10));
+        elif ((prog[pos][0] == T_REG) and (prog[pos+1][0] == T_INT)):
+          code.append(0x10);
+          code.append(0x28+prog[pos][1]);
+          code.append(prog[pos+1][1] % 256);
+          code.append(prog[pos+1][1] >> 8);
+        else:
+          print(f"`mul` can only take RC or RI");
+          return code, 1;
+        pos += 2;
+       elif (prog[pos][1] == "div"):
+        pos += 1;
+        if ((prog[pos][0] == T_REG) and (prog[pos+1][0] == T_REG)):
+          code.append(0x10);
+          code.append(0x03);
+          code.append((prog[pos][1]*10)+(prog[pos+1][1]%10));
+        elif ((prog[pos][0] == T_REG) and (prog[pos+1][0] == T_INT)):
+          code.append(0x10);
+          code.append(0x38+prog[pos][1]);
+          code.append(prog[pos+1][1] % 256);
+          code.append(prog[pos+1][1] >> 8);
+        else:
+          print(f"`div` can only take RC or RI");
           return code, 1;
         pos += 2;
       else:
