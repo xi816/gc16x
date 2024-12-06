@@ -391,8 +391,8 @@ def CompileGC16X(prog: list, labs: dict):
         pos += 1;
         if ((prog[pos][0] == T_REG) and (prog[pos+1][0] == T_REG)):
           code.append(0x10);
-          code.append(prog[pos][1]);
-          code.append(prog[pos+1][1]);
+          code.append(0x00);
+          code.append((prog[pos][1]*10)+(prog[pos+1][1]%10));
         elif ((prog[pos][0] == T_REG) and (prog[pos+1][0] == T_INT)):
           code.append(0x10);
           code.append(0x08+prog[pos][1]);

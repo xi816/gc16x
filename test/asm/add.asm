@@ -1,8 +1,7 @@
-nop
 main:
   lda 4
-  push main
-  add a 30h
+  ldb 3
+  add b a
   push 00h
   int 00h
 
