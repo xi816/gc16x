@@ -104,11 +104,12 @@ U8 PUSH1(GC* gc) {  // 0F 90
 
 U8 CPUID(GC* gc) {  // 0F E9
   switch (gc->r.D) {
-    case 0x00: {
-      return PROC_TYPE_GC16X;
+    case 0x0000: {
+      gc->r.D = PROC_TYPE_GC16X;
+      break;
     }
     default:
-      fputs("Illegal CPUID value", stderr);
+      fprintf(stderr, "Illegal CPUID value: %04X\n", gc->r.D);
       return 1;
   }
   gc->r.PC += 1;
@@ -780,12 +781,12 @@ U0 RegDump(GC gc) {
 U8 Exec(GC gc, const U32 memsize) {
   U8 exc = 0;
   while (!exc) {
-    printf("\033[32m%04X\033[0m\n", gc.r.PC);
-    getchar();
-    printf("\033[32mExecuting\033[0m\n", gc.r.PC);
+    // printf("\033[32m%04X\033[0m\n", gc.r.PC);
+    // getchar();
+    // printf("\033[32mExecuting\033[0m\n", gc.r.PC);
     exc = (INSTS[gc.mem[gc.r.PC]])(&gc);
-    StackDump(gc);
-    RegDump(gc);
+    // StackDump(gc);
+    // RegDump(gc);
   }
   return exc;
 }
