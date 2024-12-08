@@ -12,6 +12,7 @@ struct Regs {
   U8  H;   // High 8 bits
   U8  L;   // Low 8 bits
   U8 STI;  // Interrupt flag
+  U8 SEI;  // Equal flag
   U8 SCI;  // Carry flag
   U16 SP;  // Stack pointer
   U16 BP;  // Base pointer
@@ -73,6 +74,14 @@ U8 UNK(GC* gc) {    // Unknown instruction
   fprintf(stderr, "Unknown instruction %02X\nAt position %04X\n", gc->mem[gc->r.PC], gc->r.PC);
   old_st_legacy;
   return 1;
+}
+
+U8 JME0(GC* gc) {   // 0F 29
+  if (gc->r.SEI) {
+    gc->r.PC = ReadWord(*gc, gc->r.PC+1);
+    gc->r.SEI = 0x00;
+  }
+  return 0;
 }
 
 U8 JMP0(GC* gc) {   // 0F 30
@@ -470,6 +479,13 @@ U8 OR11(GC* gc) {  // 10 D9
   return 0;
 }
 
+U8 CMP11(GC* gc) {  // 10 F6
+  RegClust rc = ReadRegClust(gc->mem[gc->r.PC+1]);
+  gc->r.SEI = (*ReadReg(gc, rc.x) == *ReadReg(gc, rc.y));
+  gc->r.PC += 2; // Set equal flag if two register values
+  return 0;      // are equal
+}
+
 U8 STI(GC* gc) {   // 34
   gc->r.STI = 0x01;
   gc->r.PC++;
@@ -703,7 +719,7 @@ U8 (*INSTS[256])() = {
 U8 (*INSTS_PG0F[256])() = {
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
-  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &JME0 , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &JMP0 , &JMP1 , &JMP2 , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
@@ -735,7 +751,7 @@ U8 (*INSTS_PG10[256])() = {
   &INXA , &INXB , &INXC , &INXD , &INXS , &INXG , &INXH , &INXL , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &DEXA , &DEXB , &DEXC , &DEXD , &DEXS , &DEXG , &DEXH , &DEXL , &AND11, &OR11 , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
-  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK
+  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &CMP11, &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK
 };
 
 U8 (*INSTS_PG66[256])() = {
