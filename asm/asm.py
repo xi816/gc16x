@@ -417,7 +417,7 @@ def CompileGC16X(prog: list, labs: dict):
           print(f"`sub` can only take RC or RI");
           return code, 1;
         pos += 2;
-       elif (prog[pos][1] == "mul"):
+      elif (prog[pos][1] == "mul"):
         pos += 1;
         if ((prog[pos][0] == T_REG) and (prog[pos+1][0] == T_REG)):
           code.append(0x10);
@@ -432,7 +432,7 @@ def CompileGC16X(prog: list, labs: dict):
           print(f"`mul` can only take RC or RI");
           return code, 1;
         pos += 2;
-       elif (prog[pos][1] == "div"):
+      elif (prog[pos][1] == "div"):
         pos += 1;
         if ((prog[pos][0] == T_REG) and (prog[pos+1][0] == T_REG)):
           code.append(0x10);
