@@ -11,8 +11,8 @@ struct Regs {
   U16 G;   // Segment #2 (address)
   U8  H;   // High 8 bits
   U8  L;   // Low 8 bits
-  U8 STI; // Interrupt flag
-  U8 SCI; // Carry flag
+  U8 STI;  // Interrupt flag
+  U8 SCI;  // Carry flag
   U16 SP;  // Stack pointer
   U16 BP;  // Base pointer
   U16 PC;  // Program counter
@@ -470,6 +470,30 @@ U8 OR11(GC* gc) {  // 10 D9
   return 0;
 }
 
+U8 STI(GC* gc) {   // 34
+  gc->r.STI = 0x01;
+  gc->r.PC++;
+  return 0;
+}
+
+U8 CLC(GC* gc) {   // 36
+  gc->r.SCI = 0x00;
+  gc->r.PC++;
+  return 0;
+}
+
+U8 HLT(GC* gc) {   // 51
+  while(1) {}
+  gc->r.PC++;
+  return 0;
+}
+
+U8 CLI(GC* gc) {   // 52
+  gc->r.STI = 0x00;
+  gc->r.PC++;
+  return 0;
+}
+
 U8 LDA0(GC* gc) {   // 66 05
   gc->r.A = ReadWord(*gc, gc->r.PC+1);
   gc->r.PC += 3;
@@ -659,11 +683,11 @@ U8 PG66(GC*); // Page 66 - Load/Store operations
 // Page 00h instructions
 U8 (*INSTS[256])() = {
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &PG0F ,
-  &PG10 , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &PUSH0, &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &PG10 , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &UNK  , &UNK  , &UNK  , &UNK  , &STI  , &UNK  , &CLC  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
-  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
-  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &UNK  , &HLT  , &CLI  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &PG66 , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
