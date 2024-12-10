@@ -36,7 +36,7 @@ U8 main(I32 argc, I8** argv) {
   fclose(fl);
 
   Reset(&gc);
-  U8 ExecExit = Exec(gc, MEMSIZE);
+  U8 ExecExit = ExecDbg(gc, MEMSIZE);
   if (ExecExit) {
     old_st;
     return ExecExit;

@@ -797,36 +797,60 @@ U0 Reset(GC* gc) {
   gc->r.SCI = 0x00;
 }
 
-U0 StackDump(GC gc) {
+U0 StackDump(GC gc, U16 c) {
   printf("SP: %04X\n", gc.r.SP);
-  for (U16 i = 0x1000; i > 0x0FF0; i--) {
+  for (U16 i = 0x1000; i > 0x1000-c; i--) {
     printf("%04X: %02X\n", i, gc.mem[i]);
   }
 }
 
 U0 RegDump(GC gc) {
-  printf("A:  %04X\n", gc.r.A);
-  printf("B:  %04X\n", gc.r.B);
-  printf("C:  %04X\n", gc.r.C);
-  printf("D:  %04X\n", gc.r.D);
-  printf("S:  %04X\n", gc.r.S);
-  printf("G:  %04X\n", gc.r.G);
-  printf("H:  %02X\n", gc.r.H);
-  printf("L:  %02X\n", gc.r.L);
-  printf("SP: %04X\n", gc.r.SP);
-  printf("BP: %04X\n", gc.r.BP);
-  printf("PC: %04X\n", gc.r.PC);
+  printf("\033[44mA  %04X\033[0m\n", gc.r.A);
+  printf("\033[44mB  %04X\033[0m\n", gc.r.B);
+  printf("\033[44mC  %04X\033[0m\n", gc.r.C);
+  printf("\033[44mD  %04X\033[0m\n", gc.r.D);
+  printf("\033[44mS  %04X\033[0m\n", gc.r.S);
+  printf("\033[44mG  %04X\033[0m\n", gc.r.G);
+  printf("\033[44mH  %02X\033[0m\n", gc.r.H);
+  printf("\033[44mL  %02X\033[0m\n", gc.r.L);
+  printf("\033[44mSP %04X\033[0m\n", gc.r.SP);
+  printf("\033[44mBP %04X\033[0m\n", gc.r.BP);
+  printf("\033[44mPC %04X\033[0m\n", gc.r.PC);
 }
 
 U8 Exec(GC gc, const U32 memsize) {
   U8 exc = 0;
   while (!exc) {
-    // printf("\033[32m%04X\033[0m\n", gc.r.PC);
-    // getchar();
-    // printf("\033[32mExecuting\033[0m\n", gc.r.PC);
     exc = (INSTS[gc.mem[gc.r.PC]])(&gc);
-    // StackDump(gc);
-    // RegDump(gc);
+  }
+  return exc;
+}
+
+U8 ExecDbg(GC gc, const U32 memsize) {
+  system("stty echo");
+  U8 exc = 0;
+  char command[100];
+  while (!exc) {
+    fputs("GC >> ", stdout);
+    scanf("%s", &command);
+    if (!strcmp(command, "s")) {
+      exc = (INSTS[gc.mem[gc.r.PC]])(&gc);
+    }
+    else if (!strcmp(command, "s")) {
+      StackDump(gc, 10);
+    }
+    else if (!strcmp(command, "p")) {
+      printf("%04X\n", gc.r.PC);
+    }
+    else if (!strcmp(command, "r")) {
+      RegDump(gc);
+    }
+    else if (!strcmp(command, "q")) {
+      return 1;
+    }
+    else {
+      fputs("Bad command", stdout);
+    }
   }
   return exc;
 }
