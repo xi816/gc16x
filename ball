@@ -1,32 +1,10 @@
 #!/usr/bin/bash
-# Build all of the programs
+. /usr/bin/balld
 
-# Show executed commands
-# set -xe
-
-buildin_bro() {
-  echo -e "Building \e[32m$1\e[0m..."
-}
-
-# Build the CGovnOS virtual machine (Govno Core 16X)
-buildin_bro "CGovnOS";
-./build
-
-# Build mkfs.govnfs
-buildin_bro "mkfs.govnfs";
-cd core/mkfs.govnfs/
-./build
-cd ../../
-
-# Build gboot
-buildin_bro "gboot";
-cd core/gboot/
-./build
-cd ../../
-
-# Build GASMAN
-buildin_bro "GASMAN";
-cd core/gasman/
-./build
-cd ../../
+build_state "CGovnOS"     "./"
+build_state "mkfs.govnfs" "core/mkfs.govnfs/"
+build_state "gasman"      "core/gasman/"
+build_state "gboot"       "core/gboot/"
+build_state "ugovnfs"     "core/ugovnfs/"
+completed_state
 
