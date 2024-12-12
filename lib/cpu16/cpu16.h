@@ -102,6 +102,12 @@ U8 JMP2(GC* gc) {   // 0F 32
   return 0;
 }
 
+U8 POP1(GC* gc) {   // 0F 80
+  *ReadReg(gc, gc->mem[gc->r.PC+1]) = StackPop(gc);
+  gc->r.PC += 2;
+  return 0;
+}
+
 U8 PUSH0(GC* gc) {  // 0F 84
   StackPush(gc, ReadWord(*gc, gc->r.PC+1));
   gc->r.PC += 3;
@@ -112,6 +118,40 @@ U8 PUSH1(GC* gc) {  // 0F 90
   StackPush(gc, *ReadReg(gc, gc->mem[gc->r.PC+1]));
   gc->r.PC += 2;
   return 0;
+}
+
+U8 INT(GC* gc, bool ri) {
+  if (gc->r.STI) return 0;
+  U8 val;
+  if (ri) {
+    val = *ReadReg(gc, ReadByte(*gc, gc->r.PC+1));
+  }
+  else {
+    val = ReadByte(*gc, gc->r.PC+1);
+  }
+  switch (val) {
+    case 0x00: {
+      old_st_legacy;
+      exit(StackPop(gc));
+    }
+    case 0x02: {
+      putchar(StackPop(gc));
+      break;
+    }
+    default:
+      printf("Illegal interrupt %02X\n", val);
+      return 1;
+  }
+  gc->r.PC += 2;
+  return 0;
+}
+
+U8 INT0(GC* gc) { // 0F C2
+  return INT(gc, false);
+}
+
+U8 INT1(GC* gc) { // 0F C3
+  return INT(gc, true);
 }
 
 U8 CPUID(GC* gc) {  // 0F E9
@@ -657,40 +697,6 @@ U8 LDL1(GC* gc) {   // 66 48
   return 0;
 }
 
-U8 INT(GC* gc, bool ri) {
-  if (gc->r.STI) return 0;
-  char val;
-  if (ri) {
-    val = *ReadReg(gc, ReadByte(*gc, gc->r.PC+1));
-  }
-  else {
-    val = ReadByte(*gc, gc->r.PC+1);
-  }
-  switch (val) {
-    case 0x00: {
-      old_st_legacy;
-      exit(StackPop(gc));
-    }
-    case 0x02: {
-      putchar(StackPop(gc));
-      break;
-    }
-    default:
-      printf("Illegal interrupt %02X\n", val);
-      return 1;
-  }
-  gc->r.PC += 2;
-  return 0;
-}
-
-U8 INT0(GC* gc) { // 0F C2
-  return INT(gc, false);
-}
-
-U8 INT1(GC* gc) { // 0F C3
-  return INT(gc, true);
-}
-
 U8 NOP(GC* gc) { // EA
   return 0;
 }
@@ -728,7 +734,7 @@ U8 (*INSTS_PG0F[256])() = {
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
-  &UNK  , &UNK  , &UNK  , &UNK  , &PUSH0, &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &POP1 , &UNK  , &UNK  , &UNK  , &PUSH0, &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &PUSH1, &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
