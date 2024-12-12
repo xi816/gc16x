@@ -17,10 +17,10 @@ T_EOF   = 0xFF;
 
 LET    = "abcdefghijklmnopqrstuvwxyz";
 DIG    = "0123456789";
-WHI    = " \r\n\0";
+WHI    = " \r\n\0\t";
 DIGEXT = "0123456789ABCDEF";
 KEY1   = ["nop"];
-KEY2   = ["push", "int", "lda", "ldb", "ldc", "ldd", "lds", "ldg", "ldh", "ldl", "lodsb", "add", "sub", "mul", "div"];
+KEY2   = ["push", "int", "lda", "ldb", "ldc", "ldd", "lds", "ldg", "ldh", "ldl", "lodsb", "add", "sub", "mul", "div", "jmp", "inx", "dex"];
 KEYR   = ["a", "b", "c", "d", "s", "g", "h", "l", "sp", "bp"];
 regids = ["a", "b", "c", "d", "s", "g", "h", "l"];
 
@@ -91,19 +91,37 @@ def Lex(prog: str):
       bytesmode = 1;
       toks.append((T_EOL,));
       pos += 1;
-    elif (prog[pos] in DIG):
+    elif (prog[pos] in "%"):
+      pos += 1;
+      while (prog[pos] in LET):
+        buf += prog[pos];
+        pos += 1;
+      pos += 1;
+      if (buf in KEYR):
+        toks.append((T_REG, KEYR.index(buf), cpos));
+        cpos += 1;
+      else:
+        print(f"\033[31mUnknown\033[0m register {buf}");
+        print(f"\033[33m  Note:\033[0m at position {hex(pos)[2:]:0>4}h");
+        print(f"\033[33m  Note:\033[0m at position {pos}");
+        return 1;
+      buf = "";
+    elif (prog[pos] in "$"):
+      pos += 1;
+      while (prog[pos] in DIG):
+        buf += prog[pos];
+        pos += 1;
+      pos += 1;
+      toks.append((T_INT, int(buf, base=10)));
+      buf = "";
+      cpos += 1+bytesmode;
+    elif (prog[pos] in "#"):
+      pos += 1;
       while (prog[pos] in DIGEXT):
         buf += prog[pos];
         pos += 1;
-      if (prog[pos] == "h"):
-        toks.append((T_INT, int(buf, base=16)));
-      elif (prog[pos] == "d"):
-        toks.append((T_INT, int(buf, base=10)));
-      elif (prog[pos] == "o"):
-        toks.append((T_INT, int(buf, base=8)));
-      else:
-        toks.append((T_INT, int(buf, base=10)));
       pos += 1;
+      toks.append((T_INT, int(buf, base=16)));
       buf = "";
       cpos += 1+bytesmode;
     elif (prog[pos] in LET):
@@ -117,9 +135,6 @@ def Lex(prog: str):
         if (buf in KEY2):
           toks.append((T_INS, buf, cpos));
           cpos += 2;
-        elif (buf in KEYR):
-          toks.append((T_REG, KEYR.index(buf), cpos));
-          cpos += 1;
         elif (buf == "bytes"):
           toks.append((T_BYT, cpos));
           bytesmode = 0;
@@ -196,6 +211,23 @@ def CompileGC16X(prog: list, labs: dict):
           code.append(prog[pos][1] >> 8);
         else:
           print("ERROR: `push` instruction can only take immediate values or labels");
+          return 1;
+        pos += 1;
+      elif (prog[pos][1] == "jmp"):
+        pos += 1;
+        if (prog[pos][0] == T_INT):
+          code.append(0x0F);
+          code.append(0x30);
+          code.append(prog[pos][1] % 256);
+          code.append(prog[pos][1] >> 8);
+        elif (prog[pos][0] == T_0ID):
+          val = labs[prog[pos][1]];
+          code.append(0x0F);
+          code.append(0x30);
+          code.append(val % 256);
+          code.append(val >> 8);
+        else:
+          print("ERROR: `jmp` instruction can only take immediate values or labels");
           return 1;
         pos += 1;
       elif (prog[pos][1] == "nop"):
@@ -385,6 +417,15 @@ def CompileGC16X(prog: list, labs: dict):
           code.append(prog[pos][1] >> 8);
         else:
           print(f"`ldl` can only take immediate words, registers, or immediate addresses");
+          return code, 1;
+        pos += 1;
+      elif (prog[pos][1] == "inx"):
+        pos += 1;
+        if (prog[pos][0] == T_REG):
+          code.append(0x10);
+          code.append(0xC0+prog[pos][1]);
+        else:
+          print(f"`inx` can only take %reg");
           return code, 1;
         pos += 1;
       elif (prog[pos][1] == "add"):

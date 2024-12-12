@@ -1,12 +1,12 @@
 start:
   jmp	boot
 puts:		; Address stays at S after end
-  ldd	s
+  ldd	%s
   lodsb
-  push	s
-  int	02h
-  inc	s
-  cmp	s 00h
+  push	%s
+  int	#02
+  inx	%s
+  cmp	%s #00
   jmne	puts
 boot:		; Boot OS
   ; Show starting message

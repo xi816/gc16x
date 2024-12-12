@@ -1,0 +1,14 @@
+#!/usr/bin/bash
+print_state() {
+  printf "Building \e[32m$1\e[0m...\n"
+}
+completed_state() {
+  printf "Compilation finished\n"
+}
+build_state() {
+  print_state $1
+  cd $2
+  ./build
+  cd - > /dev/null
+}
+
