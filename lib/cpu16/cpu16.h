@@ -93,7 +93,7 @@ U8 JMP0(GC* gc) {   // 0F 30
 }
 
 U8 JMP1(GC* gc) {   // 0F 31
-  gc->r.PC = *ReadReg(gc, gc->r.PC+1);
+  gc->r.PC = *ReadReg(gc, gc->mem[gc->r.PC+1]);
   return 0;
 }
 
