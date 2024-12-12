@@ -1,5 +1,6 @@
 // CPU identificator: GC16X
 #include <cpu16/proc/std.h>
+#include <cpu16/proc/interrupts.h>
 #define MEMSIZE 65536 // Maximum for a 16-bit cpu
 
 struct Regs {
@@ -130,11 +131,15 @@ U8 INT(GC* gc, bool ri) {
     val = ReadByte(*gc, gc->r.PC+1);
   }
   switch (val) {
-    case 0x00: {
+    case INT_EXIT: {
       old_st_legacy;
       exit(StackPop(gc));
     }
-    case 0x02: {
+    case INT_READ: {
+      StackPush(gc, getchar());
+      break;
+    }
+    case INT_WRITE: {
       putchar(StackPop(gc));
       break;
     }
