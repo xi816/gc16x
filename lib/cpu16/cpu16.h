@@ -388,6 +388,18 @@ U8 DIVL0(GC* gc) {  // 10 3F
   return 0;
 }
 
+U8 STORB(GC* gc) {  // 10 80
+  gc->mem[gc->r.S] = *ReadReg(gc, gc->mem[gc->r.PC+1]);
+  gc->r.PC += 2;
+  return 0;
+}
+
+U8 STGRB(GC* gc) {  // 10 81
+  gc->mem[gc->r.G] = *ReadReg(gc, gc->mem[gc->r.PC+1]);
+  gc->r.PC += 2;
+  return 0;
+}
+
 U8 LODSB(GC* gc) {  // 10 87
   gc->r.S = ReadByte(*gc, gc->r.S);
   gc->r.PC++;
@@ -753,7 +765,7 @@ U8 (*INSTS_PG10[256])() = {
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
-  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &LODSB, &STOSB, &LODGB, &STOGB, &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &STORB, &STGRB, &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &LODSB, &STOSB, &LODGB, &STOGB, &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
@@ -847,6 +859,12 @@ U8 ExecDbg(GC gc, const U32 memsize) {
     }
     else if (!strcmp(command, "sd")) {
       StackDump(gc, 10);
+    }
+    else if (!strcmp(command, "m")) {
+      for (U16 i = 0; i < 10; i++) {
+        printf("%02X ", gc.mem[i]);
+      }
+      putchar(10);
     }
     else if (!strcmp(command, "p")) {
       printf("%04X\n", gc.r.PC);
