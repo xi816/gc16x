@@ -832,7 +832,7 @@ U8 Exec(GC gc, const U32 memsize) {
 U8 ExecDbg(GC gc, const U32 memsize) {
   system("stty echo");
   U8 exc = 0;
-  char command[100];
+  U8 command[100];
   while (!exc) {
     fputs("GC >> ", stdout);
     scanf("%s", &command);
