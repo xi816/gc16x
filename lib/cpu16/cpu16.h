@@ -81,6 +81,9 @@ U8 JME0(GC* gc) {   // 0F 29
     gc->r.PC = ReadWord(*gc, gc->r.PC+1);
     gc->r.SEI = 0x00;
   }
+  else {
+    gc->r.PC += 3;
+  }
   return 0;
 }
 
