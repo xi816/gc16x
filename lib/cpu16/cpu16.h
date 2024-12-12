@@ -53,7 +53,7 @@ U16* ReadReg(GC* gc, U8 regid) {
 }
 
 U8 StackPush(GC* gc, U16 val) {
-  gc->mem[gc->r.SP--] = (val << 8);
+  gc->mem[gc->r.SP--] = (val >> 8);
   gc->mem[gc->r.SP--] = (val % 256);
   return 0;
 }
@@ -839,7 +839,7 @@ U8 ExecDbg(GC gc, const U32 memsize) {
     if (!strcmp(command, "s")) {
       exc = (INSTS[gc.mem[gc.r.PC]])(&gc);
     }
-    else if (!strcmp(command, "s")) {
+    else if (!strcmp(command, "sd")) {
       StackDump(gc, 10);
     }
     else if (!strcmp(command, "p")) {
