@@ -3,44 +3,44 @@
 #include <cpu16/proc/interrupts.h>
 #define MEMSIZE 65536 // Maximum for a 16-bit cpu
 
-struct Regs {
-  U16 A;   // Accumulator
-  U16 B;   // Base
-  U16 C;   // Counter
-  U16 D;   // Data
-  U16 S;   // Segment (address)
-  U16 G;   // Segment #2 (address)
-  U8  H;   // High 8 bits
-  U8  L;   // Low 8 bits
-  U8 STI;  // Interrupt flag
-  U8 SEI;  // Equal flag
-  U8 SCI;  // Carry flag
-  U16 SP;  // Stack pointer
-  U16 BP;  // Base pointer
-  U16 PC;  // Program counter
+struct gcregs {
+  gcword A;   // Accumulator
+  gcword B;   // Base
+  gcword C;   // Counter
+  gcword D;   // Data
+  gcword S;   // Segment (address)
+  gcword G;   // Segment #2 (address)
+  gcbyte H;   // High 8 bits
+  gcbyte L;   // Low 8 bits
+  gcbyte STI; // Interrupt flag
+  gcbyte SEI; // Equal flag
+  gcbyte SCI; // Carry flag
+  gcword SP;  // Stack pointer
+  gcword BP;  // Base pointer
+  gcword PC;  // Program counter
 };
-struct RegClust {
-  U8 x;
-  U8 y;
+struct gcrc {
+  gcbyte x;
+  gcbyte y;
 };
-typedef struct Regs Regs;
-typedef struct RegClust RegClust;
+typedef struct gcregs gcregs_t;
+typedef struct gcrc gcrc_t;
 
 struct GC16X {
-  Regs r;
-  U8 mem[MEMSIZE];
+  gcregs_t r;
+  gcbyte mem[MEMSIZE];
 };
 typedef struct GC16X GC;
 
-U8 ReadByte(GC gc, U16 addr) {
+gcbyte ReadByte(GC gc, U16 addr) {
   return gc.mem[addr];
 }
 
-U16 ReadWord(GC gc, U16 addr) {
+gcword ReadWord(GC gc, U16 addr) {
   return (gc.mem[addr]) + (gc.mem[addr+1] << 8);
 }
 
-U16* ReadReg(GC* gc, U8 regid) {
+gcword* ReadReg(GC* gc, U8 regid) {
   // PC register cannot be changed from
   // {REG} addressing instruction. It
   // can only be changed using JMP, CALL,
@@ -53,21 +53,21 @@ U16* ReadReg(GC* gc, U8 regid) {
   return regids[regid];
 }
 
-U8 StackPush(GC* gc, U16 val) {
+gcbyte StackPush(GC* gc, U16 val) {
   gc->mem[gc->r.SP--] = (val >> 8);
   gc->mem[gc->r.SP--] = (val % 256);
   return 0;
 }
 
-U16 StackPop(GC* gc) {
+gcword StackPop(GC* gc) {
   gc->r.SP += 2;
   return ReadWord(*gc, gc->r.SP-1);
 }
 
 // Register clusters can only be used for reading data,
 // writing is not allowed.
-RegClust ReadRegClust(U8 clust) { // Read a register cluster
-  RegClust rc = {clust/10, clust%10};
+gcrc_t ReadRegClust(U8 clust) { // Read a register cluster
+  gcrc_t rc = {clust/10, clust%10};
   return rc;
 }
 
@@ -184,28 +184,28 @@ U8 CPUID(GC* gc) {  // 0F E9
 }
 
 U8 ADD11(GC* gc) {  // 10 00
-  RegClust rc = ReadRegClust(gc->mem[gc->r.PC+1]);
+  gcrc_t rc = ReadRegClust(gc->mem[gc->r.PC+1]);
   *ReadReg(gc, rc.x) += *ReadReg(gc, rc.y);
   gc->r.PC += 2;
   return 0;
 }
 
 U8 SUB11(GC* gc) {  // 10 01
-  RegClust rc = ReadRegClust(gc->mem[gc->r.PC+1]);
+  gcrc_t rc = ReadRegClust(gc->mem[gc->r.PC+1]);
   *ReadReg(gc, rc.x) -= *ReadReg(gc, rc.y);
   gc->r.PC += 2;
   return 0;
 }
 
 U8 MUL11(GC* gc) {  // 10 02
-  RegClust rc = ReadRegClust(gc->mem[gc->r.PC+1]);
+  gcrc_t rc = ReadRegClust(gc->mem[gc->r.PC+1]);
   *ReadReg(gc, rc.x) *= *ReadReg(gc, rc.y);
   gc->r.PC += 2;
   return 0;
 }
 
 U8 DIV11(GC* gc) {  // 10 03
-  RegClust rc = ReadRegClust(gc->mem[gc->r.PC+1]);
+  gcrc_t rc = ReadRegClust(gc->mem[gc->r.PC+1]);
   *ReadReg(gc, rc.x) /= *ReadReg(gc, rc.y);
   gc->r.PC += 2;
   return 0;
@@ -536,21 +536,21 @@ U8 DEXL(GC* gc) {   // 10 D7
 }
 
 U8 AND11(GC* gc) {  // 10 D8
-  RegClust rc = ReadRegClust(gc->mem[gc->r.PC+1]);
+  gcrc_t rc = ReadRegClust(gc->mem[gc->r.PC+1]);
   *ReadReg(gc, rc.x) &= *ReadReg(gc, rc.y);
   gc->r.PC += 2;
   return 0;
 }
 
 U8 OR11(GC* gc) {  // 10 D9
-  RegClust rc = ReadRegClust(gc->mem[gc->r.PC+1]);
+  gcrc_t rc = ReadRegClust(gc->mem[gc->r.PC+1]);
   *ReadReg(gc, rc.x) |= *ReadReg(gc, rc.y);
   gc->r.PC += 2;
   return 0;
 }
 
 U8 CMP11(GC* gc) {  // 10 F6
-  RegClust rc = ReadRegClust(gc->mem[gc->r.PC+1]);
+  gcrc_t rc = ReadRegClust(gc->mem[gc->r.PC+1]);
   gc->r.SEI = (*ReadReg(gc, rc.x) == *ReadReg(gc, rc.y));
   gc->r.PC += 2; // Set equal flag if two register values
   return 0;      // are equal
@@ -732,7 +732,7 @@ U8 PG0F(GC*); // Page 0F - Stack operations
 U8 PG10(GC*); // Page 10 - Register operations
 U8 PG66(GC*); // Page 66 - Load/Store operations
 
-// Page 00h instructions
+// Zero page instructions
 U8 (*INSTS[256])() = {
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &PG0F ,
   &PG10 , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
@@ -858,41 +858,6 @@ U8 Exec(GC gc, const U32 memsize) {
   U8 exc = 0;
   while (!exc) {
     exc = (INSTS[gc.mem[gc.r.PC]])(&gc);
-  }
-  return exc;
-}
-
-U8 ExecDbg(GC gc, const U32 memsize) {
-  system("stty echo");
-  U8 exc = 0;
-  U8 command[100];
-  while (!exc) {
-    fputs("GC >> ", stdout);
-    scanf("%s", &command);
-    if (!strcmp(command, "s")) {
-      exc = (INSTS[gc.mem[gc.r.PC]])(&gc);
-    }
-    else if (!strcmp(command, "sd")) {
-      StackDump(gc, 10);
-    }
-    else if (!strcmp(command, "m")) {
-      for (U16 i = 0; i < 10; i++) {
-        printf("%02X ", gc.mem[i]);
-      }
-      putchar(10);
-    }
-    else if (!strcmp(command, "p")) {
-      printf("%04X\n", gc.r.PC);
-    }
-    else if (!strcmp(command, "r")) {
-      RegDump(gc);
-    }
-    else if (!strcmp(command, "q")) {
-      return 1;
-    }
-    else {
-      fputs("Bad command", stdout);
-    }
   }
   return exc;
 }

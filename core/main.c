@@ -6,6 +6,7 @@
 #include <termios.h>
 
 #include <holyc-types.h>
+#include <gc16x-types.h>
 #include <sterm-control.h>
 #include <cpu16/cpu16.h>
 
