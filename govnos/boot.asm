@@ -25,10 +25,12 @@ puts:
 boot:
   lds st-msg
   call puts
-  hlt
+  ; hlt
 boot-start:
-  ldd $01
+  ldd $00
   cpuid
+  ; Start the shell
+  jmp com-govnos
 
   jmp fail
 
@@ -40,17 +42,24 @@ fail:
 com-govnos:
   lds welcome-msg
   call puts
-
+  ldc $0A
+  jmp com-govnos-prompt
+com-govnos-prompt:
+  lds env-PS
+  call puts
 com-govnos-input:
   int $01
   cop %d
   push %d
   int $02
-  cmp %d $0A
+  cmp %d %c
   jmne com-govnos-input
 com-govnos-process:
   lds bad-inst-msg
   call puts
+  jmp com-govnos-prompt
+com-govnos-term:
+  int $00
 
 st-msg: bytes "GovnOS$^@"
 fail-msg: bytes "Fatal error. Halted$^@"
