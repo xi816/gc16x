@@ -150,7 +150,9 @@ U8 INT(GC* gc, bool ri) {
       break;
     }
     case INT_WRITE: {
+      putchar(0x41);
       putchar(StackPop(gc));
+      fflush(stdout);
       break;
     }
     default:
@@ -735,6 +737,12 @@ U8 LOOP(GC* gc) {   // B8
   return 0;
 }
 
+U8 CALL(GC* gc) {   // C7
+  StackPush(gc, gc->r.PC+3);
+  gc->r.PC = ReadWord(*gc, gc->r.PC+1);
+  return 0;
+}
+
 U8 NOP(GC* gc) { // EA
   return 0;
 }
@@ -757,7 +765,7 @@ U8 (*INSTS[256])() = {
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &LOOP , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
-  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &CALL , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &NOP  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK
@@ -852,23 +860,29 @@ U0 StackDump(GC gc, U16 c) {
 }
 
 U0 RegDump(GC gc) {
-  printf("\033[44mA  %04X\033[0m\n", gc.r.A);
-  printf("\033[44mB  %04X\033[0m\n", gc.r.B);
-  printf("\033[44mC  %04X\033[0m\n", gc.r.C);
-  printf("\033[44mD  %04X\033[0m\n", gc.r.D);
-  printf("\033[44mS  %04X\033[0m\n", gc.r.S);
-  printf("\033[44mG  %04X\033[0m\n", gc.r.G);
-  printf("\033[44mH  %02X\033[0m\n", gc.r.H);
-  printf("\033[44mL  %02X\033[0m\n", gc.r.L);
-  printf("\033[44mSP %04X\033[0m\n", gc.r.SP);
-  printf("\033[44mBP %04X\033[0m\n", gc.r.BP);
-  printf("\033[44mPC %04X\033[0m\n", gc.r.PC);
+  printf("\033[1;20H\033[44mA  %04X\033[0m\n", gc.r.A);
+  printf("\033[2;20H\033[44mB  %04X\033[0m\n", gc.r.B);
+  printf("\033[3;20H\033[44mC  %04X\033[0m\n", gc.r.C);
+  printf("\033[4;20H\033[44mD  %04X\033[0m\n", gc.r.D);
+  printf("\033[5;20H\033[44mS  %04X\033[0m ASCII: %c\n", gc.r.S, gc.r.S);
+  printf("\033[6;20H\033[44mG  %04X\033[0m ASCII: %c\n", gc.r.G, gc.r.G);
+  printf("\033[7;20H\033[44mH    %02X\033[0m\n", gc.r.H);
+  printf("\033[8;20H\033[44mL    %02X\033[0m\n", gc.r.L);
+  printf("\033[9;20H\033[44mSP %04X\033[0m\n", gc.r.SP);
+  printf("\033[10;20H\033[44mBP %04X\033[0m\n", gc.r.BP);
+  printf("\033[11;20H\033[44mPC %04X\033[0m\n", gc.r.PC);
 }
 
 U8 Exec(GC gc, const U32 memsize) {
   U8 exc = 0;
   while (!exc) {
     exc = (INSTS[gc.mem[gc.r.PC]])(&gc);
+    /*
+    fputs("\033[H\033[2J", stdout);
+    StackDump(gc, 10);
+    RegDump(gc);
+    */
+    getchar();
   }
   return exc;
 }

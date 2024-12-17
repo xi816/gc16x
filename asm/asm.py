@@ -10,17 +10,24 @@ T_LAB   = 0x03;
 T_REG   = 0x04;
 T_0ID   = 0x05;
 T_CHR   = 0x06;
-T_REG   = 0x07;
-T_ADDR  = 0x08;
-T_EOL   = 0x09;
+T_ADDR  = 0x07;
+T_EOL   = 0x08;
 T_EOF   = 0xFF;
 
-LET    = "abcdefghijklmnopqrstuvwxyz";
+HUMAN_TOKS = ["INST", "INT", "BYTES", "LABEL", "REG", "NAME", "STRING", "ADDRESS", "EOL"];
+
+LET    = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 DIG    = "0123456789";
-WHI    = " \r\n\0\t";
+WHI    = " \r\0\t";
 DIGEXT = "0123456789ABCDEF";
-KEY1   = ["nop"];
-KEY2   = ["push", "int", "lda", "ldb", "ldc", "ldd", "lds", "ldg", "ldh", "ldl", "lodsb", "add", "sub", "mul", "div", "jmp", "inx", "dex"];
+KEY1   = [
+  "nop", "ret", "hlt", "call", "cop"
+];
+KEY2   = [
+  "push", "int", "lda", "ldb", "ldc", "ldd", "lds", "ldg", "ldh", "ldl",
+  "lodsb", "add", "sub", "mul", "div", "jmp", "inx", "dex", "cmp", "jme",
+  "jmne", "cpuid"
+];
 KEYR   = ["a", "b", "c", "d", "s", "g", "h", "l", "sp", "bp"];
 regids = ["a", "b", "c", "d", "s", "g", "h", "l"];
 
@@ -31,6 +38,13 @@ def funny_bar(msg: str) -> None:
     print(f"  [{'#'*i}{' '*(19-i)}]", end="\r");
     time.sleep(0.03);
   print(f"\033[?25h");
+
+def PrintTokens(toks: list):
+  for i in toks:
+    if (len(i) == 3):
+      print(f"${hex(i[2])[2:].upper():0>4}: {HUMAN_TOKS[i[0]]} {i[1]}");
+    elif (len(i) == 2):
+      print(f"     : {HUMAN_TOKS[i[0]]} {i[1]}");
 
 # Lexer:
 def Lex(prog: str):
@@ -51,6 +65,7 @@ def Lex(prog: str):
       pos += 1;
       while (prog[pos] != "\n"):
         pos += 1;
+      pos += 1;
     elif (prog[pos] == "\""):
       pos += 1;
       while (prog[pos] != "\""):
@@ -99,14 +114,16 @@ def Lex(prog: str):
       pos += 1;
       if (buf in KEYR):
         toks.append((T_REG, KEYR.index(buf), cpos));
-        cpos += 1;
+        print(f"TOKS;-2;1 = {toks[-2][1]}");
+        if ((toks[-2][0] != T_REG) and (toks[-2][1] != "inx")):
+          cpos += 1;
       else:
         print(f"\033[31mUnknown\033[0m register {buf}");
         print(f"\033[33m  Note:\033[0m at position {hex(pos)[2:]:0>4}h");
         print(f"\033[33m  Note:\033[0m at position {pos}");
         return 1;
       buf = "";
-    elif (prog[pos] in "$"):
+    elif (prog[pos] in "#"):
       pos += 1;
       while (prog[pos] in DIG):
         buf += prog[pos];
@@ -115,7 +132,7 @@ def Lex(prog: str):
       toks.append((T_INT, int(buf, base=10)));
       buf = "";
       cpos += 1+bytesmode;
-    elif (prog[pos] in "#"):
+    elif (prog[pos] in "$"):
       pos += 1;
       while (prog[pos] in DIGEXT):
         buf += prog[pos];
@@ -134,6 +151,8 @@ def Lex(prog: str):
       else:
         if (buf in KEY2):
           toks.append((T_INS, buf, cpos));
+          if (buf == "int"):
+            bytesmode = 0;
           cpos += 2;
         elif (buf == "bytes"):
           toks.append((T_BYT, cpos));
@@ -180,7 +199,7 @@ def CompileGC16X(prog: list, labs: dict):
           for i in prog[pos][1]:
             code.append(ord(i) % 256);
         else:
-          print(f"  ERROR: Unknown byte {prog[pos][0]}");
+          print(f"  ERROR: Unknown byte {prog[pos]}");
           return [], 1;
         pos += 1;
       pos += 1;
@@ -213,6 +232,22 @@ def CompileGC16X(prog: list, labs: dict):
           print("ERROR: `push` instruction can only take immediate values or labels");
           return 1;
         pos += 1;
+      elif (prog[pos][1] == "cmp"):
+        pos += 1;
+        if ((prog[pos][0] == T_REG) and (prog[pos+1][0] == T_REG)):
+          code.append(0x10);
+          code.append(0xF6);
+          code.append((prog[pos][1]*10)+(prog[pos+1][1]%10));
+        elif ((prog[pos][0] == T_REG) and (prog[pos+1][0] == T_INT)):
+          code.append(0x10);
+          code.append(0xEE);
+          code.append(prog[pos][1]);
+          code.append(prog[pos+1][1] % 256);
+          code.append(prog[pos+1][1] >> 8);
+        else:
+          print(f"`cmp` can only take RC or RI");
+          return code, 1;
+        pos += 2;
       elif (prog[pos][1] == "jmp"):
         pos += 1;
         if (prog[pos][0] == T_INT):
@@ -230,8 +265,54 @@ def CompileGC16X(prog: list, labs: dict):
           print("ERROR: `jmp` instruction can only take immediate values or labels");
           return 1;
         pos += 1;
+      elif (prog[pos][1] == "jme"):
+        pos += 1;
+        if (prog[pos][0] == T_INT):
+          code.append(0x0F);
+          code.append(0x29);
+          code.append(prog[pos][1] % 256);
+          code.append(prog[pos][1] >> 8);
+        elif (prog[pos][0] == T_0ID):
+          val = labs[prog[pos][1]];
+          code.append(0x0F);
+          code.append(0x29);
+          code.append(val % 256);
+          code.append(val >> 8);
+        else:
+          print("ERROR: `jme` instruction can only take immediate values or labels");
+          return 1;
+        pos += 1;
+      elif (prog[pos][1] == "jmne"):
+        pos += 1;
+        if (prog[pos][0] == T_INT):
+          code.append(0x0F);
+          code.append(0x2A);
+          code.append(prog[pos][1] % 256);
+          code.append(prog[pos][1] >> 8);
+        elif (prog[pos][0] == T_0ID):
+          val = labs[prog[pos][1]];
+          code.append(0x0F);
+          code.append(0x2A);
+          code.append(val % 256);
+          code.append(val >> 8);
+        else:
+          print("ERROR: `jmne` instruction can only take immediate values or labels");
+          return 1;
+        pos += 1;
+      elif (prog[pos][1] == "ret"):
+        code.append(0x33);
+        pos += 1;
       elif (prog[pos][1] == "nop"):
         code.append(0xEA);
+        pos += 1;
+      elif (prog[pos][1] == "cop"):
+        pos += 1;
+        if (prog[pos][0] == T_REG):
+          code.append(0xD7);
+          code.append(prog[pos][1]);
+        else:
+          print("ERROR: `cop` instruction can only take registers");
+          return code, 1;
         pos += 1;
       elif (prog[pos][1] == "int"):
         pos += 1;
@@ -261,8 +342,7 @@ def CompileGC16X(prog: list, labs: dict):
         elif (prog[pos][0] == T_REG):
           code.append(0x66);
           code.append(0x41);
-          code.append(prog[pos][1] % 256);
-          code.append(prog[pos][1] >> 8);
+          code.append(prog[pos][1]);
         elif (prog[pos][0] == T_ADDR):
           code.append(0x66);
           code.append(0x92);
@@ -282,8 +362,7 @@ def CompileGC16X(prog: list, labs: dict):
         elif (prog[pos][0] == T_REG):
           code.append(0x66);
           code.append(0x42);
-          code.append(prog[pos][1] % 256);
-          code.append(prog[pos][1] >> 8);
+          code.append(prog[pos][1]);
         elif (prog[pos][0] == T_ADDR):
           code.append(0x66);
           code.append(0x93);
@@ -303,8 +382,7 @@ def CompileGC16X(prog: list, labs: dict):
         elif (prog[pos][0] == T_REG):
           code.append(0x66);
           code.append(0x43);
-          code.append(prog[pos][1] % 256);
-          code.append(prog[pos][1] >> 8);
+          code.append(prog[pos][1]);
         elif (prog[pos][0] == T_ADDR):
           code.append(0x66);
           code.append(0x94);
@@ -324,8 +402,7 @@ def CompileGC16X(prog: list, labs: dict):
         elif (prog[pos][0] == T_REG):
           code.append(0x66);
           code.append(0x44);
-          code.append(prog[pos][1] % 256);
-          code.append(prog[pos][1] >> 8);
+          code.append(prog[pos][1]);
         elif (prog[pos][0] == T_ADDR):
           code.append(0x66);
           code.append(0x95);
@@ -345,13 +422,18 @@ def CompileGC16X(prog: list, labs: dict):
         elif (prog[pos][0] == T_REG):
           code.append(0x66);
           code.append(0x45);
-          code.append(prog[pos][1] % 256);
-          code.append(prog[pos][1] >> 8);
+          code.append(prog[pos][1]);
         elif (prog[pos][0] == T_ADDR):
           code.append(0x66);
           code.append(0x96);
           code.append(prog[pos][1] % 256);
           code.append(prog[pos][1] >> 8);
+        elif (prog[pos][0] == T_0ID):
+          val = labs[prog[pos][1]];
+          code.append(0x66);
+          code.append(0x09);
+          code.append(val % 256);
+          code.append(val >> 8);
         else:
           print(f"`lds` can only take immediate words, registers, or immediate addresses");
           return code, 1;
@@ -366,8 +448,7 @@ def CompileGC16X(prog: list, labs: dict):
         elif (prog[pos][0] == T_REG):
           code.append(0x66);
           code.append(0x46);
-          code.append(prog[pos][1] % 256);
-          code.append(prog[pos][1] >> 8);
+          code.append(prog[pos][1]);
         elif (prog[pos][0] == T_ADDR):
           code.append(0x66);
           code.append(0x97);
@@ -387,8 +468,7 @@ def CompileGC16X(prog: list, labs: dict):
         elif (prog[pos][0] == T_REG):
           code.append(0x66);
           code.append(0x47);
-          code.append(prog[pos][1] % 256);
-          code.append(prog[pos][1] >> 8);
+          code.append(prog[pos][1]);
         elif (prog[pos][0] == T_ADDR):
           code.append(0x66);
           code.append(0x98);
@@ -408,8 +488,7 @@ def CompileGC16X(prog: list, labs: dict):
         elif (prog[pos][0] == T_REG):
           code.append(0x66);
           code.append(0x48);
-          code.append(prog[pos][1] % 256);
-          code.append(prog[pos][1] >> 8);
+          code.append(prog[pos][1]);
         elif (prog[pos][0] == T_ADDR):
           code.append(0x66);
           code.append(0x99);
@@ -419,6 +498,13 @@ def CompileGC16X(prog: list, labs: dict):
           print(f"`ldl` can only take immediate words, registers, or immediate addresses");
           return code, 1;
         pos += 1;
+      elif (prog[pos][1] == "hlt"):
+        pos += 1;
+        code.append(0x51);
+      elif (prog[pos][1] == "cpuid"):
+        pos += 1;
+        code.append(0x0F);
+        code.append(0xE9);
       elif (prog[pos][1] == "inx"):
         pos += 1;
         if (prog[pos][0] == T_REG):
@@ -426,6 +512,31 @@ def CompileGC16X(prog: list, labs: dict):
           code.append(0xC0+prog[pos][1]);
         else:
           print(f"`inx` can only take %reg");
+          return code, 1;
+        pos += 1;
+      elif (prog[pos][1] == "cop"):
+        pos += 1;
+        if (prog[pos][0] == T_REG):
+          code.append(0x10);
+          code.append(0xEC);
+          code.append(prog[pos][1]);
+        else:
+          print(f"`cop` can only take registers");
+          return code, 1;
+        pos += 1;
+      elif (prog[pos][1] == "call"):
+        pos += 1;
+        if (prog[pos][0] == T_INT):
+          code.append(0xC7);
+          code.append(prog[pos][1] % 256);
+          code.append(prog[pos][1] >> 8);
+        elif (prog[pos][0] == T_0ID):
+          val = labs[prog[pos][1]];
+          code.append(0xC7);
+          code.append(val % 256);
+          code.append(val >> 8);
+        else:
+          print(f"`call` can only take immediates or labels");
           return code, 1;
         pos += 1;
       elif (prog[pos][1] == "add"):
@@ -525,6 +636,8 @@ def main(argc: int, argv: list) -> int:
   src = RemEmpty(src)+"\0";
   if (jwm): funny_bar("Lexing");
   tokens, exitcode = Lex(src);
+  PrintTokens(tokens);
+  print(tokens);
   if (jwm): funny_bar("Compiling");
   c, exitcode = CompileGC16X(tokens, FetchLabels(tokens));
   if (jwm): funny_bar("Writing to a file");
