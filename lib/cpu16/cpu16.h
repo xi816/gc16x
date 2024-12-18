@@ -557,6 +557,12 @@ U8 CMP11(GC* gc) {  // 10 F6
   return 0;      // are equal
 }
 
+U8 CMP10(GC* gc) {  // 10 EE
+  gc->r.SEI = (*ReadReg(gc, gc->mem[gc->r.PC+1]) == ReadWord(*gc, gc->r.PC+2));
+  gc->r.PC += 4; // Set equal flag if a register and
+  return 0;      // immediate are equal
+}
+
 U8 RET(GC* gc) {   // 33
   gc->r.PC = StackPop(gc);
   return 0;
@@ -730,6 +736,13 @@ U8 LDL1(GC* gc) {   // 66 48
   return 0;
 }
 
+U8 INXM(GC* gc) {   // B0
+  printf("Addr: %04X\n", gc->r.PC+1);
+  gc->mem[ReadWord(*gc, gc->r.PC+1)]++;
+  gc->r.PC += 3;
+  return 0;
+}
+
 U8 LOOP(GC* gc) {   // B8
   if (gc->r.C != gc->r.D) {
     gc->r.C--;
@@ -775,7 +788,7 @@ U8 (*INSTS[256])() = {
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
-  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &LOOP , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &INXM , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &LOOP , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &CALL , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &COP1 , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &NOP  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
@@ -816,7 +829,7 @@ U8 (*INSTS_PG10[256])() = {
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &INXA , &INXB , &INXC , &INXD , &INXS , &INXG , &INXH , &INXL , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &DEXA , &DEXB , &DEXC , &DEXD , &DEXS , &DEXG , &DEXH , &DEXL , &AND11, &OR11 , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
-  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &CMP10, &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &CMP11, &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK
 };
 
@@ -894,6 +907,10 @@ U8 Exec(GC gc, const U32 memsize) {
     RegDump(gc);
     */
     // getchar();
+    for (U32 i = 0; i < 0x12; i++) {
+      printf("%04X: %c\n", 0x1B1 + i, gc.mem[0x1B1 + i]);
+    }
+    puts("\0");
   }
   return exc;
 }
