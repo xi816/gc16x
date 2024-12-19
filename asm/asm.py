@@ -21,7 +21,7 @@ DIG    = "0123456789";
 WHI    = " \r\0\t";
 DIGEXT = "0123456789ABCDEF";
 KEY1   = [
-  "nop", "ret", "hlt", "call", "cop", "inc"
+  "nop", "ret", "hlt", "call", "cop", "inc", "dec"
 ];
 KEY2   = [
   "push", "int", "lda", "ldb", "ldc", "ldd", "lds", "ldg", "ldh", "ldl",
@@ -114,7 +114,6 @@ def Lex(prog: str):
       pos += 1;
       if (buf in KEYR):
         toks.append((T_REG, KEYR.index(buf), cpos));
-        print(f"TOKS;-2;1 = {toks[-2][1]}");
         if ((toks[-2][0] != T_REG) and (toks[-2][1] != "inx")):
           cpos += 1;
       else:
@@ -179,7 +178,6 @@ def Lex(prog: str):
       print(f"\033[33m  Note:\033[0m at position {pos}");
       print(f"\033[33m  Note:\033[0m `{prog[pos]}`");
       return [], 1;
-
   return [], 1;
 
 def FetchLabels(prog: list):
@@ -567,6 +565,17 @@ def CompileGC16X(prog: list, labs: dict):
           code.append(val >> 8);
         else:
           print(f"`inc` can only take labels");
+          return code, 1;
+        pos += 1;
+      elif (prog[pos][1] == "dec"):
+        pos += 1;
+        if (prog[pos][0] == T_0ID):
+          val = labs[prog[pos][1]];
+          code.append(0x90);
+          code.append(val % 256);
+          code.append(val >> 8);
+        else:
+          print(f"`dec` can only take labels");
           return code, 1;
         pos += 1;
       elif (prog[pos][1] == "inx"):

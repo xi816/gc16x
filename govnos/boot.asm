@@ -75,7 +75,6 @@ boot-unk-cpu:
 boot-shell:
   ; Start the shell
   call com-govnos
-  call com-exit
 
 fail:
   lds fail-msg
@@ -100,29 +99,51 @@ com-govnos-input:
   add %s %g
   storb %d
   inc commi
+  cmp %d $7F ; Check for Backspace (1)
+  jme com-govnos-bs
+  cmp %d $08 ; Check for Backspace (2)
+  jme com-govnos-bs
+  cmp %d $04 ; Check for Ctrl-D (exit)
+  jme com-govnos-shutdown
   cmp %d $0A ; Check for Enter
   jmne com-govnos-input
-com-govnos-process:
-  lds bad-inst-msg
+  jmp com-govnos-process
+com-govnos-bs:
+  lds commi
+  lodsb
+  cmp %s $00
+  jme com-govnos-bs-strict
+com-govnos-bs-strict:
+  dec commi
+  lds bs-smb
   call puts
+  jmp com-govnos-input
+com-govnos-process:
+  ldd $00
+  storb %d
+  ; lds bad-inst-msg
+  ; call puts
   lds comm
   call puts
   push $0A
   int $02
+  lds commi
+  ldd $00
+  lodgb
+  storb %d
   jmp com-govnos-prompt
-com-govnos-term:
-  ret
-com-exit:
+com-govnos-shutdown:
   lds exit-msg
   call puts
+com-govnos-term:
   push $00
   int $00
 
 ; Text
 st-msg:       bytes "Loading GovnOS ...$^@"
 fail-msg:     bytes "Fatal error. Halted$^@"
-exit-msg:     bytes "exit$^@"
-welcome-msg:  bytes "Welcome to GovnOS!$To get help, type `help`$$^@"
+exit-msg:     bytes "$Shutting down ...$^@"
+welcome-msg:  bytes "Welcome to GovnOS!$To get help, type `help`$To shutdown, press Ctrl-D$$^@"
 
 ; CPU types
 procchk-msg:  bytes "[0000] Checking CPU$^@"
@@ -131,6 +152,9 @@ proc-unk-msg: bytes "[0001] CPU: Unknown$$^@"
 
 ; Environment variables
 env-PS:       bytes "^$ ^@^@^@^@^@^@^@^@^@"
+
+; Control sequences
+bs-smb:       bytes $08 $20 $08 "^@"
 
 ; Commands
 full-inst-he: bytes "he^@"
