@@ -39,16 +39,17 @@ strcmp:
   inx %b
   jmp strcmp
 strcmp-eq:
-  ldh $00
+  lda $00
   ret
 strcmp-fail:
-  ldh $01
+  lda $01
   ret
 
 ; D - directory
 ; G - filename
 ; S - address to store data from a file
 gfs-read-file:
+  lds kp-1-0msg
   jmp fail
 
 boot:
@@ -71,13 +72,13 @@ boot-gc16x-cpu:
 boot-unk-cpu:
   lds proc-unk-msg
   call puts
+  lds kp-0-0msg
   jmp fail
 boot-shell:
   ; Start the shell
   call com-govnos
 
 fail:
-  lds fail-msg
   call puts
   hlt
 
@@ -90,7 +91,7 @@ com-govnos-prompt:
   call puts
 com-govnos-input:
   int $01    ; Get character from input
-  cop %d     ; Save to D register
+  pop %d     ; Save to D register
   cmp %d $7F ; Check for Backspace (1)
   jme com-govnos-bs
   cmp %d $08 ; Check for Backspace (2)
@@ -103,8 +104,6 @@ com-govnos-input:
   add %s %g
   storb %d
   inc commi
-  cmp %d $04 ; Check for Ctrl-D (exit)
-  jme com-govnos-shutdown
   cmp %d $0A ; Check for Enter
   jmne com-govnos-input
   jmp com-govnos-process
@@ -115,23 +114,65 @@ com-govnos-bs:
   jme com-govnos-input
 com-govnos-bs-strict:
   dec commi
-  lds bs-smb
+  lds bs-seq
   call puts
   jmp com-govnos-input
 com-govnos-process:
   ldd $00
   storb %d
-  ; lds bad-inst-msg
+  ; lds comm
   ; call puts
-  lds comm
-  call puts
   push $0A
   int $02
   lds commi
   ldd $00
   lodgb
-  storb %d
+  storb %d ; Load $00 (NUL) instead of $0A (Enter)
+
+  ; he
+  lda comm
+  ldb instFULL-he
+  call strcmp ; Assembly with your own library is easy right :D
+  cmp %a $00  ; Check for 0 (equal status)
+  jme com-govnosEXEC-he
+
+  ; cls
+  lda comm
+  ldb instFULL-cls
+  call strcmp
+  cmp %a $00
+  jme com-govnosEXEC-cls
+
+  ; exit
+  lda comm
+  ldb instFULL-exit
+  call strcmp
+  cmp %a $00
+  jme com-govnosEXEC-exit
+
+  ; Otherwise it's a bad instruction
+  lds bad-inst-msg
+  call puts
+com-govnos-aftexec:
   jmp com-govnos-prompt
+
+; Commands
+com-govnosEXEC-he:
+  lds he-loaded-msg
+  call puts
+  jmp com-govnos-aftexec ; Go to a new task after execution
+
+com-govnosEXEC-cls:
+  lds cls-seq
+  call puts
+  jmp com-govnos-aftexec
+
+com-govnosEXEC-exit:
+  lds exit-term-msg
+  call puts
+  jmp com-govnos-term
+
+; Shutdown and termination
 com-govnos-shutdown:
   lds exit-msg
   call puts
@@ -140,27 +181,44 @@ com-govnos-term:
   int $00
 
 ; Text
-st-msg:       bytes "Loading GovnOS ...$^@"
-fail-msg:     bytes "Fatal error. Halted$^@"
-exit-msg:     bytes "$Shutting down ...$^@"
-welcome-msg:  bytes "Welcome to GovnOS!$To get help, type `help`$To shutdown, press Ctrl-D$$^@"
-bschk:        bytes "Backspace$^@"
+st-msg:        bytes "Loading GovnOS ...$^@"
+fail-msg:      bytes "Halting execution ...$^@"
+exit-msg:      bytes "$Shutting down ...$^@"
+exit-term-msg: bytes "exit$^@"
+welcome-msg:   bytes "Welcome to GovnOS!$To get help, type `help`$To shutdown, press Ctrl-D$$^@"
+bschk:         bytes "Backspace$^@"
+he-loaded-msg: bytes "`he` is running$^@"
+
+; Kernel panic
+; 0 - Processor error
+; 1 - Filesystem error
+; 41 - Unknown error
+kp-0-0msg:     bytes "Kernel panic: Unable to find processor type(0,0)$^@"
+kp-1-0msg:     bytes "Kernel panic: Unknown filesystem(1,0)$^@"
+kp-41-0msg:    bytes "Kernel panic: Kernel error(41,0)$^@"
 
 ; CPU types
-procchk-msg:  bytes "[0000] Checking CPU$^@"
-proc-00-msg:  bytes "[0001] CPU: Govno Core 16X$$^@"
-proc-unk-msg: bytes "[0001] CPU: Unknown$$^@"
+procchk-msg:   bytes "[0000] Checking CPU$^@"
+proc-00-msg:   bytes "[0001] CPU: Govno Core 16X$$^@"
+proc-unk-msg:  bytes "[0001] CPU: Unknown$$^@"
 
 ; Environment variables
-env-PS:       bytes "^$ ^@^@^@^@^@^@^@^@^@"
+env-PS:        bytes "^$ ^@^@^@^@^@^@^@^@^@"
 
 ; Control sequences
-bs-smb:       bytes $08 $20 $08 "^@"
+bs-seq:        bytes ^08 ^20 ^08 "^@"
+cls-seq:       bytes ^1B ^5B ^48 ^1B ^5B ^32 ^4A "^@"
 
 ; Commands
-full-inst-he: bytes "he^@"
-bad-inst-msg: bytes "Bad command.$^@"
+instFULL-he:   bytes "he^@"
+instFULL-cls:  bytes "cls^@"
+instFULL-exit: bytes "exit^@"
+bad-inst-msg:  bytes "Bad command.$^@"
 
-comm:         bytes "^@^@^@^@^@^@^@^@^@^@^@^@^@^@^@^@"
-commi:        bytes $00
+; Buffers
+comm:          bytes "^@^@^@^@^@^@^@^@^@^@^@^@^@^@^@^@"
+               bytes "^@^@^@^@^@^@^@^@^@^@^@^@^@^@^@^@"
+               bytes "^@^@^@^@^@^@^@^@^@^@^@^@^@^@^@^@"
+               bytes "^@^@^@^@^@^@^@^@^@^@^@^@^@^@^@^@"
+commi:         bytes ^00
 

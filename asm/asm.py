@@ -26,7 +26,7 @@ KEY1   = [
 KEY2   = [
   "push", "int", "lda", "ldb", "ldc", "ldd", "lds", "ldg", "ldh", "ldl",
   "lodsb", "add", "sub", "mul", "div", "jmp", "inx", "dex", "cmp", "jme",
-  "jmne", "cpuid", "lodgb", "storb"
+  "jmne", "cpuid", "lodgb", "storb", "pop"
 ];
 KEYR   = ["a", "b", "c", "d", "s", "g", "h", "l", "sp", "bp"];
 regids = ["a", "b", "c", "d", "s", "g", "h", "l"];
@@ -135,6 +135,15 @@ def Lex(prog: str):
         bytesmode = 0;
       buf = "";
       cpos += 1+bytesmode;
+    elif (prog[pos] in "^"):
+      pos += 1;
+      while (prog[pos] in DIGEXT):
+        buf += prog[pos];
+        pos += 1;
+      pos += 1;
+      toks.append((T_INT, int(buf, base=16)));
+      buf = "";
+      cpos += 1;
     elif (prog[pos] in "$"):
       pos += 1;
       while (prog[pos] in DIGEXT):
@@ -237,6 +246,16 @@ def CompileGC16X(prog: list, labs: dict):
           code.append(prog[pos][1] >> 8);
         else:
           print("ERROR: `push` instruction can only take immediate values or labels");
+          return 1;
+        pos += 1;
+      elif (prog[pos][1] == "pop"):
+        pos += 1;
+        if (prog[pos][0] == T_REG):
+          code.append(0x0F);
+          code.append(0x80);
+          code.append(prog[pos][1] % 256);
+        else:
+          print("ERROR: `pop` instruction can only take registers");
           return 1;
         pos += 1;
       elif (prog[pos][1] == "cmp"):

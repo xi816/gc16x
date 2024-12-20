@@ -906,6 +906,7 @@ U8 Exec(GC gc, const U32 memsize) {
   U8 exc = 0;
   while (!exc) {
     exc = (INSTS[gc.mem[gc.r.PC]])(&gc);
+    // StackDump(gc, 10);
     /*
     fputs("\033[H\033[2J", stdout);
     StackDump(gc, 10);
