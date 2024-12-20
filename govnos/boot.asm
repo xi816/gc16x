@@ -91,6 +91,10 @@ com-govnos-prompt:
 com-govnos-input:
   int $01    ; Get character from input
   cop %d     ; Save to D register
+  cmp %d $7F ; Check for Backspace (1)
+  jme com-govnos-bs
+  cmp %d $08 ; Check for Backspace (2)
+  jme com-govnos-bs
   push %d    ; Output the
   int $02    ; character
   lds comm
@@ -99,20 +103,16 @@ com-govnos-input:
   add %s %g
   storb %d
   inc commi
-  cmp %d $7F ; Check for Backspace (1)
-  jme com-govnos-bs
-  cmp %d $08 ; Check for Backspace (2)
-  jme com-govnos-bs
   cmp %d $04 ; Check for Ctrl-D (exit)
   jme com-govnos-shutdown
   cmp %d $0A ; Check for Enter
   jmne com-govnos-input
   jmp com-govnos-process
 com-govnos-bs:
-  lds commi
-  lodsb
-  cmp %s $00
-  jme com-govnos-bs-strict
+  ldg commi
+  lodgb
+  cmp %g $00
+  jme com-govnos-input
 com-govnos-bs-strict:
   dec commi
   lds bs-smb
@@ -144,6 +144,7 @@ st-msg:       bytes "Loading GovnOS ...$^@"
 fail-msg:     bytes "Fatal error. Halted$^@"
 exit-msg:     bytes "$Shutting down ...$^@"
 welcome-msg:  bytes "Welcome to GovnOS!$To get help, type `help`$To shutdown, press Ctrl-D$$^@"
+bschk:        bytes "Backspace$^@"
 
 ; CPU types
 procchk-msg:  bytes "[0000] Checking CPU$^@"

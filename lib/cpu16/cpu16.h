@@ -912,7 +912,7 @@ U8 Exec(GC gc, const U32 memsize) {
     RegDump(gc);
     // getchar();
     for (U32 i = 0; i < 0x12; i++) {
-      printf("%04X: %02X\n", 0x1B3 + i, gc.mem[0x1B3 + i]);
+      printf("%04X: %02X\n", 0x22F + i, gc.mem[0x22F + i]);
     }
     puts("\0");
     */
