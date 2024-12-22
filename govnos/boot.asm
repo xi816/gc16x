@@ -252,6 +252,7 @@ help-msg:      bytes "GovnOS Help manual page 1/1$"
                bytes "  dir       List directories$"
                bytes "  exit      Exit$"
                bytes "  help      Show help$"
+               bytes "  hlt       Halt the system (Kernel panic 6,0)$"
                bytes "  retr      Restart the shell$^@"
 
 ; Kernel panic
