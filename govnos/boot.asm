@@ -10,22 +10,26 @@ jmp boot
 ; Dir: F0 [name] F0
 ; File: F1 [filename] F2 [dir] F2 [contents] F1
 
+; puts - Output string until NUL ($00)
+; Arguments:
+; S - string address
 puts:
-  ldd %s     ; G = S
-  lodsb      ; S = [S]
-  push %s    ; PUSH(S)
-  int $02    ; INT(2)
-  cmp %s $00 ; SEI = (S == 0)
-  lds %d     ; S = D
-  inx %s     ; S++
-  jmne puts  ; IF (!SEI) PC = PUTS
-  ret        ; RETURN
+  ldd %s
+  lodsb
+  push %s
+  int $02
+  cmp %s $00
+  lds %d
+  inx %s
+  jmne puts
+  ret
 
+; strcmp - Check if two strings are equal
 ; Arguments:
 ; A - first string address
 ; B - second string address
 ; Returns:
-; H - status
+; A - status
 strcmp:
   lds %a
   ldg %b
@@ -45,6 +49,22 @@ strcmp-fail:
   lda $01
   ret
 
+; strnul - Check if string is empty
+; Arguments:
+; A - string address
+; Returns:
+; A - status
+strnul:
+  lds %a
+  lodsb
+  cmp %s $00
+  jme strnul-nul
+  lda $01
+  ret
+strnul-nul:
+  lda $00
+  ret
+
 ; D - directory
 ; G - filename
 ; S - address to store data from a file
@@ -52,6 +72,7 @@ gfs-read-file:
   lds kp-1-0msg
   jmp fail
 
+; Boot GovnOS
 boot:
   lds st-msg
   call puts
@@ -82,11 +103,12 @@ fail:
   call puts
   hlt
 
+; com-govnos - GovnOS Shell
 com-govnos:
   lds welcome-msg
   call puts
   jmp com-govnos-prompt
-com-govnos-prompt:
+com-govnos-prompt: ; Print the prompt
   lds env-PS
   call puts
 com-govnos-input:
@@ -107,7 +129,7 @@ com-govnos-input:
   cmp %d $0A ; Check for Enter
   jmne com-govnos-input
   jmp com-govnos-process
-com-govnos-bs:
+com-govnos-bs: ; Handle backspace ($7F or $08)
   ldg commi
   lodgb
   cmp %g $00
@@ -117,24 +139,30 @@ com-govnos-bs-strict:
   lds bs-seq
   call puts
   jmp com-govnos-input
-com-govnos-process:
+com-govnos-process: ; Process the command
   ldd $00
   storb %d
   ; lds comm
   ; call puts
-  push $0A
-  int $02
+  ; push $0A
+  ; int $02
   lds commi
   ldd $00
   lodgb
   storb %d ; Load $00 (NUL) instead of $0A (Enter)
 
-  ; he
+  ; Empty command
   lda comm
-  ldb instFULL-he
+  call strnul
+  cmp %a $00
+  jme com-govnos-aftexec
+
+  ; dir
+  lda comm
+  ldb instFULL-dir
   call strcmp ; Assembly with your own library is easy right :D
   cmp %a $00  ; Check for 0 (equal status)
-  jme com-govnosEXEC-he
+  jme com-govnosEXEC-dir
 
   ; cls
   lda comm
@@ -143,12 +171,26 @@ com-govnos-process:
   cmp %a $00
   jme com-govnosEXEC-cls
 
+  ; help
+  lda comm
+  ldb instFULL-help
+  call strcmp
+  cmp %a $00
+  jme com-govnosEXEC-help
+
   ; exit
   lda comm
   ldb instFULL-exit
   call strcmp
   cmp %a $00
   jme com-govnosEXEC-exit
+
+  ; retr
+  lda comm
+  ldb instFULL-retr
+  call strcmp
+  cmp %a $00
+  jme com-govnos
 
   ; Otherwise it's a bad instruction
   lds bad-inst-msg
@@ -157,13 +199,18 @@ com-govnos-aftexec:
   jmp com-govnos-prompt
 
 ; Commands
-com-govnosEXEC-he:
-  lds he-loaded-msg
+com-govnosEXEC-dir:
+  lds dir-00msg
   call puts
   jmp com-govnos-aftexec ; Go to a new task after execution
 
 com-govnosEXEC-cls:
   lds cls-seq
+  call puts
+  jmp com-govnos-aftexec
+
+com-govnosEXEC-help:
+  lds help-msg
   call puts
   jmp com-govnos-aftexec
 
@@ -185,9 +232,15 @@ st-msg:        bytes "Loading GovnOS ...$^@"
 fail-msg:      bytes "Halting execution ...$^@"
 exit-msg:      bytes "$Shutting down ...$^@"
 exit-term-msg: bytes "exit$^@"
-welcome-msg:   bytes "Welcome to GovnOS!$To get help, type `help`$To shutdown, press Ctrl-D$$^@"
+welcome-msg:   bytes "Welcome to GovnOS!$To get help, type `help`$$^@"
 bschk:         bytes "Backspace$^@"
-he-loaded-msg: bytes "`he` is running$^@"
+dir-00msg:     bytes "dir is not implemented$^@"
+help-msg:      bytes "GovnOS Help manual page 1/1$"
+               bytes "  cls       Clear the screen$"
+               bytes "  dir       List directories$"
+               bytes "  exit      Exit$"
+               bytes "  help      Show help$"
+               bytes "  retr      Restart the shell$^@"
 
 ; Kernel panic
 ; 0 - Processor error
@@ -210,9 +263,11 @@ bs-seq:        bytes ^08 ^20 ^08 "^@"
 cls-seq:       bytes ^1B ^5B ^48 ^1B ^5B ^32 ^4A "^@"
 
 ; Commands
-instFULL-he:   bytes "he^@"
+instFULL-dir:  bytes "dir^@"
 instFULL-cls:  bytes "cls^@"
+instFULL-help: bytes "help^@"
 instFULL-exit: bytes "exit^@"
+instFULL-retr: bytes "retr^@"
 bad-inst-msg:  bytes "Bad command.$^@"
 
 ; Buffers

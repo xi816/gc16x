@@ -28,6 +28,11 @@ U8 main(I32 argc, I8** argv) {
   strcpy(fn, argv[1]);
 
   FILE* fl = fopen(fn, "rb");
+  if (fl == NULL) {
+    fprintf(stderr, "Error while opening %s\n", fn);
+    old_st;
+    return 1;
+  }
   fseek(fl, 0, SEEK_END);
   const U32 flsize = ftell(fl);
   fseek(fl, 0, SEEK_SET);
