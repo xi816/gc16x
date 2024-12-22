@@ -178,6 +178,13 @@ com-govnos-process: ; Process the command
   cmp %a $00
   jme com-govnosEXEC-help
 
+  ; hlt
+  lda comm
+  ldb instFULL-hlt
+  call strcmp
+  cmp %a $00
+  jme com-govnosEXEC-hlt
+
   ; exit
   lda comm
   ldb instFULL-exit
@@ -214,6 +221,11 @@ com-govnosEXEC-help:
   call puts
   jmp com-govnos-aftexec
 
+com-govnosEXEC-hlt:
+  lds kp-6-0msg
+  call puts
+  hlt
+
 com-govnosEXEC-exit:
   lds exit-term-msg
   call puts
@@ -248,6 +260,7 @@ help-msg:      bytes "GovnOS Help manual page 1/1$"
 ; 41 - Unknown error
 kp-0-0msg:     bytes "Kernel panic: Unable to find processor type(0,0)$^@"
 kp-1-0msg:     bytes "Kernel panic: Unknown filesystem(1,0)$^@"
+kp-6-0msg:     bytes "Kernel panic: Triggered halt(6,0)$^@"
 kp-41-0msg:    bytes "Kernel panic: Kernel error(41,0)$^@"
 
 ; CPU types
@@ -266,6 +279,7 @@ cls-seq:       bytes ^1B ^5B ^48 ^1B ^5B ^32 ^4A "^@"
 instFULL-dir:  bytes "dir^@"
 instFULL-cls:  bytes "cls^@"
 instFULL-help: bytes "help^@"
+instFULL-hlt:  bytes "hlt^@"
 instFULL-exit: bytes "exit^@"
 instFULL-retr: bytes "retr^@"
 bad-inst-msg:  bytes "Bad command.$^@"
