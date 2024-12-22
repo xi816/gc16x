@@ -5,7 +5,7 @@ CGovnOS is a virtual machine for the Govno Core 16X processor.
 ## Start
 1. Compile the source code\
 The `./ball` script compiles all of the programs included in this repo: CGovnOS-GC16X, mkfs.govnfs, gboot and GASMAN.\
-For only compiling CGovnOS-GC16X you can use the `./build` script. (`kasm` assembler will not be build as it is written in python).
+For only compiling CGovnOS-GC16X you can use the `./build` script. (`kasm` assembler will not be built as it is written in python).
 
 2. Write assembly code (GovnASM) and compile it to binary\
 Now you can start writing assembly code. For example, create a file called `test.asm`:
