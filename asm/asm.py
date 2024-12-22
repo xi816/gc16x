@@ -189,11 +189,11 @@ def Lex(prog: str):
       return [], 1;
   return [], 1;
 
-def FetchLabels(prog: list):
+def FetchLabels(prog: list, disk: bool):
   labs = dict();
   for i in prog:
     if (i[0] == T_LAB):
-      labs[i[1]] = i[2];
+      labs[i[1]] = i[2]+(0x91EE*disk);
   return labs;
 
 def RemEmpty(prog: str):
@@ -709,6 +709,7 @@ def CompileGC16X(prog: list, labs: dict):
 
 def main(argc: int, argv: list) -> int:
   jwm = False;
+  diskmode = False;
   if (argc == 1):
     print("No arguments given");
     return 1;
@@ -721,6 +722,8 @@ def main(argc: int, argv: list) -> int:
   elif (argc == 4):
     if (argv[1] == "-jwm"):
       jwm = True;
+    elif (argv[1] == "-d"):
+      diskmode = True;
     else:
       print(f"\033[31mUnknown\033[0m argument `{argv[1]}`");
       return 1;
@@ -737,7 +740,7 @@ def main(argc: int, argv: list) -> int:
   PrintTokens(tokens);
   print(tokens);
   if (jwm): funny_bar("Compiling");
-  c, exitcode = CompileGC16X(tokens, FetchLabels(tokens));
+  c, exitcode = CompileGC16X(tokens, FetchLabels(tokens, diskmode));
   if (jwm): funny_bar("Writing to a file");
   with open(outname, "wb") as fl:
     fl.write(c);

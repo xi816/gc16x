@@ -19,3 +19,11 @@ and compile it with `kasm`: `./kasm test.asm test.bin`.
 3. Running binary on a CGovnOS-GC16X virtual machine\
 Now, you can run it using `./gc16 test.bin`. Congratulations, you compiled GovnASM assembly for the Govno Core 16X processor and ran it on a CGovnOS-GC16X virtual machine.
 
+## Compile GovnOS
+To compile and run GovnOS on GC16X, type:
+```
+newdisk name.img
+rom-load-govnos name.img
+run-govnos name.img
+```
+

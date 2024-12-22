@@ -69,7 +69,7 @@ strnul-nul:
 ; G - filename
 ; S - address to store data from a file
 gfs-read-file:
-  lds kp-1-0msg
+  lds kp-1-1msg
   jmp fail
 
 ; Boot GovnOS
@@ -209,6 +209,8 @@ com-govnos-aftexec:
 com-govnosEXEC-dir:
   lds dir-00msg
   call puts
+  lds kp-1-1msg
+  call fail
   jmp com-govnos-aftexec ; Go to a new task after execution
 
 com-govnosEXEC-cls:
@@ -257,10 +259,11 @@ help-msg:      bytes "GovnOS Help manual page 1/1$"
 
 ; Kernel panic
 ; 0 - Processor error
-; 1 - Filesystem error
+; 1 - Disk/Filesystem error
 ; 41 - Unknown error
 kp-0-0msg:     bytes "Kernel panic: Unable to find processor type(0,0)$^@"
 kp-1-0msg:     bytes "Kernel panic: Unknown filesystem(1,0)$^@"
+kp-1-1msg:     bytes "Kernel panic: Could not read disk(1,1)$^@"
 kp-6-0msg:     bytes "Kernel panic: Triggered halt(6,0)$^@"
 kp-41-0msg:    bytes "Kernel panic: Kernel error(41,0)$^@"
 
@@ -270,7 +273,8 @@ proc-00-msg:   bytes "[0001] CPU: Govno Core 16X$$^@"
 proc-unk-msg:  bytes "[0001] CPU: Unknown$$^@"
 
 ; Environment variables
-env-PS:        bytes "^$ ^@^@^@^@^@^@^@^@^@"
+; 11 bytes
+env-PS:        bytes "gsh1.0^$ ^@^@^@"
 
 ; Control sequences
 bs-seq:        bytes ^08 ^20 ^08 "^@"
@@ -290,5 +294,6 @@ comm:          bytes "^@^@^@^@^@^@^@^@^@^@^@^@^@^@^@^@"
                bytes "^@^@^@^@^@^@^@^@^@^@^@^@^@^@^@^@"
                bytes "^@^@^@^@^@^@^@^@^@^@^@^@^@^@^@^@"
                bytes "^@^@^@^@^@^@^@^@^@^@^@^@^@^@^@^@"
-commi:         bytes ^00
+commi:         bytes "^@"
+bootsecend:    bytes ^AA ^55 "^@"
 

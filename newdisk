@@ -1,0 +1,18 @@
+#!/usr/bin/bash
+set -e
+
+if [ $# = 0 ]; then
+  printf "No disk name and size given\n";
+  exit 1;
+fi
+
+if [ $# = 1 ]; then
+  printf "No size given\n";
+  exit 1;
+fi
+
+touch $1
+truncate $1 -s $2
+
+printf "Disk $1 successfully created\n" $1
+

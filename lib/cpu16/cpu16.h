@@ -1,6 +1,7 @@
 // CPU identificator: GC16X
 #include <cpu16/proc/std.h>
 #include <cpu16/proc/interrupts.h>
+#define ROMSIZE 65536 // Maximum for a 16-bit cpu
 #define MEMSIZE 65536 // Maximum for a 16-bit cpu
 
 struct gcregs {
@@ -29,6 +30,7 @@ typedef struct gcrc gcrc_t;
 struct GC16X {
   gcregs_t r;
   gcbyte mem[MEMSIZE];
+  gcbyte rom[ROMSIZE];
 };
 typedef struct GC16X GC;
 
@@ -872,13 +874,20 @@ U8 PG66(GC* gc) {   // 66H
   return (INSTS_PG66[gc->mem[gc->r.PC]])(gc);
 }
 
-U0 Reset(GC* gc) {
+U0 Reset(GC* gc, U16 driveboot) {
   gc->r.SP = 0x1000;
   gc->r.BP = 0x1000;
   gc->r.PC = 0x0000;
   
   gc->r.STI = 0x00;
   gc->r.SCI = 0x00;
+}
+
+U0 PageDump(GC gc, U8 page) {
+  for (U16 i = (page*256); i < (page*256)+256; i++) {
+    if (!(i % 16)) putchar(10);
+    printf("%02X ", gc.mem[i]);
+  }
 }
 
 U0 StackDump(GC gc, U16 c) {
@@ -906,6 +915,7 @@ U8 Exec(GC gc, const U32 memsize) {
   U8 exc = 0;
   while (!exc) {
     exc = (INSTS[gc.mem[gc.r.PC]])(&gc);
+    // printf("PC: $%04X\n", gc.r.PC);
     // StackDump(gc, 10);
     /*
     fputs("\033[H\033[2J", stdout);

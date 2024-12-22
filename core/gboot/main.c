@@ -25,8 +25,8 @@ I8 status(bool stat) {
 }
 
 I32 main(I32 argc, I8** argv) {
-  printf("GBoot 1.0\n");
-  U16 BootSectorStart = 0x8000;
+  printf("GBoot 1.1\n");
+  U16 BootSectorStart = 0x91EE;
   if (argc == 1) {
     fprintf(stderr, "No files given\n");
     return status(false);
