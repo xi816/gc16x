@@ -65,6 +65,24 @@ strnul-nul:
   lda $00
   ret
 
+; memcpy - Copy memory location into an other area
+; Arguments:
+; A - Target
+; B - Destination
+; C - Number of bytes to copy
+memcpy:
+  ldd $00
+  lds %a
+  lodsb
+  ldg %b
+  stgrb %s
+  inx %a
+  inx %b
+  loop memcpy
+  ret
+
+; gfs-read-file - Read the file in the drive (GovnFS filesystem) and
+; copy the file contents into an address
 ; D - directory
 ; G - filename
 ; S - address to store data from a file
@@ -199,6 +217,13 @@ com-govnos-process: ; Process the command
   cmp %a $00
   jme com-govnos
 
+  ; drive
+  lda comm
+  ldb instFULL-drve
+  call strcmp
+  cmp %a $00
+  jme com-govnosEXEC-drive
+
   ; Otherwise it's a bad instruction
   lds bad-inst-msg
   call puts
@@ -228,6 +253,20 @@ com-govnosEXEC-hlt:
   call puts
   hlt
 
+com-govnosEXEC-drive:
+  ldd $01
+  cpuid
+  cmp %d $00
+  jme com-govnosEXEC-driveDSC
+com-govnosEXEC-driveCNN:
+  lds drvCNN-msg
+  call puts
+  jmp com-govnos-aftexec
+com-govnosEXEC-driveDSC:
+  lds drvDSC-msg
+  call puts
+  jmp com-govnos-aftexec
+
 com-govnosEXEC-exit:
   lds exit-term-msg
   call puts
@@ -252,6 +291,7 @@ dir-00msg:     bytes "dir is not implemented$^@"
 help-msg:      bytes "GovnOS Help manual page 1/1$"
                bytes "  cls       Clear the screen$"
                bytes "  dir       List directories$"
+               bytes "  drive     Show if any drive is connected$"
                bytes "  exit      Exit$"
                bytes "  help      Show help$"
                bytes "  hlt       Halt the system (Kernel panic 6,0)$"
@@ -272,9 +312,13 @@ procchk-msg:   bytes "[0000] Checking CPU$^@"
 proc-00-msg:   bytes "[0001] CPU: Govno Core 16X$$^@"
 proc-unk-msg:  bytes "[0001] CPU: Unknown$$^@"
 
+drvCNN-msg:    bytes "Disk connected as A/$^@"
+drvDSC-msg:    bytes "Disk disconnected, A/ is an empty byte stream.$"
+               bytes "Loading without a disk can have serious issues for commands that use GovnFS filesystem$^@"
+
 ; Environment variables
 ; 11 bytes
-env-PS:        bytes "gsh1.0^$ ^@^@^@"
+env-PS:        bytes "A/^$ ^@^@^@^@^@^@^@"
 
 ; Control sequences
 bs-seq:        bytes ^08 ^20 ^08 "^@"
@@ -287,6 +331,7 @@ instFULL-help: bytes "help^@"
 instFULL-hlt:  bytes "hlt^@"
 instFULL-exit: bytes "exit^@"
 instFULL-retr: bytes "retr^@"
+instFULL-drve: bytes "drive^@"
 bad-inst-msg:  bytes "Bad command.$^@"
 
 ; Buffers
@@ -295,5 +340,5 @@ comm:          bytes "^@^@^@^@^@^@^@^@^@^@^@^@^@^@^@^@"
                bytes "^@^@^@^@^@^@^@^@^@^@^@^@^@^@^@^@"
                bytes "^@^@^@^@^@^@^@^@^@^@^@^@^@^@^@^@"
 commi:         bytes "^@"
-bootsecend:    bytes ^AA ^55 "^@"
+bootsecend:    bytes ^AA ^55 "^@" ; End the boot sector
 

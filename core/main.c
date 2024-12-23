@@ -46,7 +46,7 @@ U8 main(I32 argc, I8** argv) {
 
   FILE* fl = fopen(fn, "rb");
   FILE* dfl;
-  U32 dflsize;
+  U32 dflsize = 0;
   if (fl == NULL) {
     fprintf(stderr, "Error while opening %s\n", fn);
     old_st;
@@ -70,7 +70,9 @@ U8 main(I32 argc, I8** argv) {
   GC gc;
   fread(gc.mem, 1, flsize, fl);
   fread(gc.rom, 1, dflsize, dfl);
+  gc.pin |= 0b00000000;
   if (driveboot) {
+    gc.pin |= 0b10000000; // 1 - Drive is connected
     loadBootSector(gc.rom, gc.mem);
     fclose(dfl);
   }

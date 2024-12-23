@@ -31,6 +31,7 @@ struct GC16X {
   gcregs_t r;
   gcbyte mem[MEMSIZE];
   gcbyte rom[ROMSIZE];
+  gcbyte pin;
 };
 typedef struct GC16X GC;
 
@@ -153,7 +154,6 @@ U8 INT(GC* gc, bool ri) {
     }
     case INT_WRITE: {
       putchar(StackPop(gc));
-      // fflush(stdout);
       break;
     }
     default:
@@ -174,8 +174,12 @@ U8 INT1(GC* gc) { // 0F C3
 
 U8 CPUID(GC* gc) {  // 0F E9
   switch (gc->r.D) {
-    case 0x0000: {
+    case 0x0000: { // Get processor type
       gc->r.D = PROC_TYPE_GC16X;
+      break;
+    }
+    case 0x0001: { // Get connected drive
+      gc->r.D = ((gc->pin & 0b10000000) >> 7);
       break;
     }
     default:

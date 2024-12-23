@@ -21,12 +21,12 @@ DIG    = "0123456789";
 WHI    = " \r\0\t";
 DIGEXT = "0123456789ABCDEF";
 KEY1   = [
-  "nop", "ret", "hlt", "call", "cop", "inc", "dec"
+  "nop", "ret", "hlt", "call", "cop", "inc", "dec", "loop"
 ];
 KEY2   = [
   "push", "int", "lda", "ldb", "ldc", "ldd", "lds", "ldg", "ldh", "ldl",
   "lodsb", "add", "sub", "mul", "div", "jmp", "inx", "dex", "cmp", "jme",
-  "jmne", "cpuid", "lodgb", "storb", "pop"
+  "jmne", "cpuid", "lodgb", "storb", "stgrb", "pop"
 ];
 KEYR   = ["a", "b", "c", "d", "s", "g", "h", "l", "sp", "bp"];
 regids = ["a", "b", "c", "d", "s", "g", "h", "l"];
@@ -325,6 +325,17 @@ def CompileGC16X(prog: list, labs: dict):
           print("ERROR: `jmne` instruction can only take immediate values or labels");
           return 1;
         pos += 1;
+      elif (prog[pos][1] == "loop"):
+        pos += 1;
+        if (prog[pos][0] == T_0ID):
+          val = labs[prog[pos][1]];
+          code.append(0xB8);
+          code.append(val % 256);
+          code.append(val >> 8);
+        else:
+          print("ERROR: `loop` instruction can only take labels");
+          return 1;
+        pos += 1;
       elif (prog[pos][1] == "ret"):
         code.append(0x33);
         pos += 1;
@@ -370,6 +381,16 @@ def CompileGC16X(prog: list, labs: dict):
           code.append(prog[pos][1]);
         else:
           print(f"`storb` can only take registers");
+          return code, 1;
+        pos += 1;
+      elif (prog[pos][1] == "stgrb"):
+        pos += 1;
+        code.append(0x10);
+        code.append(0x81);
+        if (prog[pos][0] == T_REG):
+          code.append(prog[pos][1]);
+        else:
+          print(f"`stgrb` can only take registers");
           return code, 1;
         pos += 1;
       elif (prog[pos][1] == "lda"):
