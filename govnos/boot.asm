@@ -10,6 +10,20 @@ jmp boot
 ; Dir: F0 [name] F0
 ; File: F1 [filename] F2 [dir] F2 [contents] F1
 
+; write - Output the buffer
+; Arguments:
+; S - buffer address
+; C - number of characters to output
+write:
+  ldd $00
+  ldg %s
+  lodgb
+  push %g
+  int $02
+  inx %s
+  loop write
+  ret
+
 ; puts - Output string until NUL ($00)
 ; Arguments:
 ; S - string address
@@ -22,6 +36,32 @@ puts:
   lds %d
   inx %s
   jmne puts
+  ret
+
+; inttostr - Convert a 16-bit integer into a string
+; Arguments:
+; A - Number
+inttostr:
+  ldg inttostr-buf
+  add %g $04
+inttostr-lp:
+  div %a #10 ; Divide and get the remainder into D
+  add %d #48 ; Convert to ASCII
+  lds %g
+  storb %d
+  dex %g
+  cmp %a $00
+  jmne inttostr-lp
+  ret
+inttostr-buf: bytes "^@^@^@^@^@"
+
+; puti - Output a 16-bit integer number
+; Arguments:
+puti:
+  call inttostr
+  lds inttostr-buf
+  ldc $05
+  call write
   ret
 
 ; strcmp - Check if two strings are equal

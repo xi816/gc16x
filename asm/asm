@@ -5,11 +5,9 @@ import time;
 
 T_INS   = 0x00;
 T_INT   = 0x01;
-T_BYT   = 0x02;
 T_LAB   = 0x03;
 T_REG   = 0x04;
 T_0ID   = 0x05;
-T_CHR   = 0x06;
 T_ADDR  = 0x07;
 T_EOL   = 0x08;
 T_EOF   = 0xFF;
@@ -21,23 +19,13 @@ DIG    = "0123456789";
 WHI    = " \r\0\t";
 DIGEXT = "0123456789ABCDEF";
 KEY1   = [
-  "nop", "ret", "hlt", "call", "cop", "inc", "dec", "loop"
+  "nop"
 ];
 KEY2   = [
-  "push", "int", "lda", "ldb", "ldc", "ldd", "lds", "ldg", "ldh", "ldl",
-  "lodsb", "add", "sub", "mul", "div", "jmp", "inx", "dex", "cmp", "jme",
-  "jmne", "cpuid", "lodgb", "storb", "stgrb", "pop"
+  "lda", "ldar"
 ];
 KEYR   = ["a", "b", "c", "d", "s", "g", "h", "l", "sp", "bp"];
 regids = ["a", "b", "c", "d", "s", "g", "h", "l"];
-
-# Uwunny bar
-def funny_bar(msg: str) -> None:
-  print(f"{msg}...\033[?25l");
-  for i in range(20):
-    print(f"  [{'#'*i}{' '*(19-i)}]", end="\r");
-    time.sleep(0.03);
-  print(f"\033[?25h");
 
 def PrintTokens(toks: list):
   for i in toks:
@@ -55,7 +43,6 @@ def Lex(prog: str):
   proglen = len(prog);
   basemode = 10;
   buf = "";
-  bytesmode = 1;
   while (True):
     if (prog[pos] == "\0"):
       toks.append((T_EOL,));
@@ -66,46 +53,17 @@ def Lex(prog: str):
       while (prog[pos] != "\n"):
         pos += 1;
       pos += 1;
-    elif (prog[pos] == "\""):
-      pos += 1;
-      while (prog[pos] != "\""):
-        if (prog[pos] == "$"):
-          buf += "\n";
-        elif (prog[pos] == "^"):
-          pos += 1;
-          if (ord(prog[pos]) in range(65, 91)):
-            buf += chr(ord(prog[pos])-64);
-          elif (prog[pos] == "@"):
-            buf += "\0";
-          elif (prog[pos] == "$"):
-            buf += "$";
-        else:
-          buf += prog[pos];
-        pos += 1;
-        cpos += 1;
-      pos += 1;
-      toks.append((T_CHR, buf, cpos));
-      buf = "";
     elif (prog[pos] in WHI):
       pos += 1;
-    elif (prog[pos] == "["):
-      pos += 1;
-      while (prog[pos] != "]"):
-        buf += prog[pos];
-        pos += 1;
-      if (prog[pos-1] == "d"):
-        toks.append((T_ADDR, int(buf[:-1], base=10)));
-      elif (prog[pos-1] == "h"):
-        toks.append((T_ADDR, int(buf[:-1], base=16)));
-      else:
-        toks.append((T_ADDR, int(buf[:-1], base=10)));
-      input();
-      buf = "";
-      pos += 1;
     elif (prog[pos] == "\n"):
-      bytesmode = 1;
       toks.append((T_EOL,));
       pos += 1;
+    elif (prog[pos] in "."):
+      pos += 1;
+      toks.append((T_REG, KEYR.index(prog[pos]), cpos));
+      toks.append((T_REG, KEYR.index(prog[pos+1]), cpos));
+      pos += 2;
+      cpos += 1;
     elif (prog[pos] in "%"):
       pos += 1;
       while (prog[pos] in LET):
@@ -114,10 +72,7 @@ def Lex(prog: str):
       pos += 1;
       if (buf in KEYR):
         toks.append((T_REG, KEYR.index(buf), cpos));
-        if ((toks[-2][0] != T_REG) and (toks[-2][1] != "inx") and (toks[-2][1] != "dex")):
-          cpos += 1;
-        elif ((toks[-2][1] != "add") and (toks[-2][1] != "sub")):
-          print("$"+hex(toks[-2][2])[2:].upper(), toks[-2][1], toks[-1][1]);
+        cpos += 1;
       else:
         print(f"\033[31mUnknown\033[0m register {buf}");
         print(f"\033[33m  Note:\033[0m at position {hex(pos)[2:]:0>4}h");
