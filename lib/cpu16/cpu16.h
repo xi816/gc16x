@@ -603,37 +603,37 @@ U8 LDG0(GC* gc) {   // 66 0A
 }
 
 U8 LDAZ(GC* gc) {   // 66 15 -- LDA Zero Page
-  gc->r.A = gc->mem[gc->r.PC+1];
+  gc->r.A = gc->mem[gc->mem[gc->r.PC+1]];
   gc->r.PC += 2;
   return 0;
 }
 
 U8 LDBZ(GC* gc) {   // 66 16 -- LDB Zero Page
-  gc->r.B = gc->mem[gc->r.PC+1];
+  gc->r.B = gc->mem[gc->mem[gc->r.PC+1]];
   gc->r.PC += 2;
   return 0;
 }
 
 U8 LDCZ(GC* gc) {   // 66 17 -- LDC Zero Page
-  gc->r.C = gc->mem[gc->r.PC+1];
+  gc->r.C = gc->mem[gc->mem[gc->r.PC+1]];
   gc->r.PC += 2;
   return 0;
 }
 
 U8 LDDZ(GC* gc) {   // 66 18 -- LDD Zero Page
-  gc->r.D = gc->mem[gc->r.PC+1];
+  gc->r.D = gc->mem[gc->mem[gc->r.PC+1]];
   gc->r.PC += 2;
   return 0;
 }
 
 U8 LDSZ(GC* gc) {   // 66 19 -- LDS Zero Page
-  gc->r.S = gc->mem[gc->r.PC+1];
+  gc->r.S = gc->mem[gc->mem[gc->r.PC+1]];
   gc->r.PC += 2;
   return 0;
 }
 
 U8 LDGZ(GC* gc) {   // 66 1A -- LDG Zero Page
-  gc->r.G = gc->mem[gc->r.PC+1];
+  gc->r.G = gc->mem[gc->mem[gc->r.PC+1]];
   gc->r.PC += 2;
   return 0;
 }
@@ -1101,13 +1101,11 @@ U8 Exec(GC gc, const U32 memsize) {
   U8 exc = 0;
   while (!exc) {
     exc = (INSTS[gc.mem[gc.r.PC]])(&gc);
-    // printf("PC: $%04X\n", gc.r.PC);
-    // StackDump(gc, 10);
     /*
-    fputs("\033[H\033[2J", stdout);
+    getchar();
     StackDump(gc, 10);
     RegDump(gc);
-    // getchar();
+    fputs("\033[H\033[2J", stdout);
     for (U32 i = 0; i < 0x12; i++) {
       printf("%04X: %02X\n", 0x22F + i, gc.mem[0x22F + i]);
     }
