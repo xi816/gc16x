@@ -41,28 +41,28 @@ puts:
 ; inttostr - Convert a 16-bit integer into a string
 ; Arguments:
 ; A - Number
-inttostr:
-  ldg inttostr-buf
-  add %g $04
-inttostr-lp:
-  div %a #10 ; Divide and get the remainder into D
-  add %d #48 ; Convert to ASCII
-  lds %g
-  storb %d
-  dex %g
-  cmp %a $00
-  jmne inttostr-lp
-  ret
-inttostr-buf: bytes "^@^@^@^@^@"
+; inttostr:
+;   ldg inttostr-buf
+;   add %g $04
+; inttostr-lp:
+;   div %a #10 ; Divide and get the remainder into D
+;   add %d #48 ; Convert to ASCII
+;   lds %g
+;   storb %d
+;   dex %g
+;   cmp %a $00
+;   jmne inttostr-lp
+;   ret
+; inttostr-buf: bytes "^@^@^@^@^@"
 
 ; puti - Output a 16-bit integer number
 ; Arguments:
-puti:
-  call inttostr
-  lds inttostr-buf
-  ldc $05
-  call write
-  ret
+; puti:
+;   call inttostr
+;   lds inttostr-buf
+;   ldc $05
+;   call write
+;   ret
 
 ; strcmp - Check if two strings are equal
 ; Arguments:
