@@ -639,73 +639,73 @@ U8 LDGZ(GC* gc) {   // 66 1A -- LDG Zero Page
 }
 
 U8 LDAZS(GC* gc) {   // 66 25 -- LDG Zero Page,S
-  gc->r.A = gc->mem[gc->r.PC+1+gc->r.S];
+  gc->r.A = gc->mem[gc->mem[gc->r.PC+1]+gc->r.S];
   gc->r.PC += 2;
   return 0;
 }
 
 U8 LDBZS(GC* gc) {   // 66 26 -- LDG Zero Page,S
-  gc->r.B = gc->mem[gc->r.PC+1+gc->r.S];
+  gc->r.B = gc->mem[gc->mem[gc->r.PC+1]+gc->r.S];
   gc->r.PC += 2;
   return 0;
 }
 
 U8 LDCZS(GC* gc) {   // 66 27 -- LDG Zero Page,S
-  gc->r.C = gc->mem[gc->r.PC+1+gc->r.S];
+  gc->r.C = gc->mem[gc->mem[gc->r.PC+1]+gc->r.S];
   gc->r.PC += 2;
   return 0;
 }
 
 U8 LDDZS(GC* gc) {   // 66 28 -- LDG Zero Page,S
-  gc->r.D = gc->mem[gc->r.PC+1+gc->r.S];
+  gc->r.D = gc->mem[gc->mem[gc->r.PC+1]+gc->r.S];
   gc->r.PC += 2;
   return 0;
 }
 
 U8 LDSZS(GC* gc) {   // 66 29 -- LDG Zero Page,S
-  gc->r.S = gc->mem[gc->r.PC+1+gc->r.S];
+  gc->r.S = gc->mem[gc->mem[gc->r.PC+1]+gc->r.S];
   gc->r.PC += 2;
   return 0;
 }
 
 U8 LDGZS(GC* gc) {   // 66 2A -- LDG Zero Page,S
-  gc->r.G = gc->mem[gc->r.PC+1+gc->r.S];
+  gc->r.G = gc->mem[gc->mem[gc->r.PC+1]+gc->r.S];
   gc->r.PC += 2;
   return 0;
 }
 
 U8 LDAZG(GC* gc) {   // 66 35 -- LDG Zero Page,G
-  gc->r.A = gc->mem[gc->r.PC+1+gc->r.G];
+  gc->r.A = gc->mem[gc->mem[gc->r.PC+1]+gc->r.G];
   gc->r.PC += 2;
   return 0;
 }
 
 U8 LDBZG(GC* gc) {   // 66 36 -- LDG Zero Page,G
-  gc->r.B = gc->mem[gc->r.PC+1+gc->r.G];
+  gc->r.B = gc->mem[gc->mem[gc->r.PC+1]+gc->r.G];
   gc->r.PC += 2;
   return 0;
 }
 
 U8 LDCZG(GC* gc) {   // 66 37 -- LDG Zero Page,G
-  gc->r.C = gc->mem[gc->r.PC+1+gc->r.G];
+  gc->r.C = gc->mem[gc->mem[gc->r.PC+1]+gc->r.G];
   gc->r.PC += 2;
   return 0;
 }
 
 U8 LDDZG(GC* gc) {   // 66 38 -- LDG Zero Page,G
-  gc->r.D = gc->mem[gc->r.PC+1+gc->r.G];
+  gc->r.D = gc->mem[gc->mem[gc->r.PC+1]+gc->r.G];
   gc->r.PC += 2;
   return 0;
 }
 
 U8 LDSZG(GC* gc) {   // 66 39 -- LDG Zero Page,G
-  gc->r.S = gc->mem[gc->r.PC+1+gc->r.G];
+  gc->r.S = gc->mem[gc->mem[gc->r.PC+1]+gc->r.G];
   gc->r.PC += 2;
   return 0;
 }
 
 U8 LDGZG(GC* gc) {   // 66 3A -- LDG Zero Page,G
-  gc->r.G = gc->mem[gc->r.PC+1+gc->r.G];
+  gc->r.G = gc->mem[gc->mem[gc->r.PC+1]+gc->r.G];
   gc->r.PC += 2;
   return 0;
 }
