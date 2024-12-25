@@ -399,25 +399,25 @@ U8 STOGB(GC* gc) {  // 10 8A
 
 U8 LDDS(GC* gc) {  // 10 8B
   gc->r.S = gc->rom[*gc, gc->r.S];
-  gc->r.PC++;
+  gc->r.PC += 2;
   return 0;
 }
 
 U8 LDDG(GC* gc) {  // 10 9B
   gc->r.G = gc->rom[*gc, gc->r.G];
-  gc->r.PC++;
+  gc->r.PC += 2;
   return 0;
 }
 
 U8 STDS(GC* gc) {  // 10 AB
   gc->rom[gc->r.S] = *ReadReg(gc, gc->r.PC+1);
-  gc->r.PC++;
+  gc->r.PC += 2;
   return 0;
 }
 
 U8 STDG(GC* gc) {  // 10 BB
   gc->rom[gc->r.G] = *ReadReg(gc, gc->r.PC+1);
-  gc->r.PC++;
+  gc->r.PC += 2;
   return 0;
 }
 
@@ -1104,6 +1104,7 @@ U8 Exec(GC gc, const U32 memsize) {
     exc = (INSTS[gc.mem[gc.r.PC]])(&gc);
     /*
     getchar();
+    printf("PC: %04X\n", gc.r.PC);
     StackDump(gc, 10);
     RegDump(gc);
     fputs("\033[H\033[2J", stdout);

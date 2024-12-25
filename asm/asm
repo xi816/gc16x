@@ -9,14 +9,16 @@ T_LAB   = 0x02;
 T_REG   = 0x03;
 T_0ID   = 0x04;
 T_ADDR  = 0x05;
-T_EOL   = 0x06;
+T_BYTE  = 0x06;
+T_EOL   = 0x07;
 T_EOF   = 0xFF;
 
-ASTINS  = 0x00;
-ASTEOF  = 0x01;
+ASTINS   = 0x00;
+ASTBYTES = 0x01;
+ASTEOF   = 0x02;
 
-HUMAN_TOKS = ["INST", "INT", "LABEL", "REG", "NAME", "ADDRESS", "EOL"];
-HUMAN_AST  = ["INST", "EOF"];
+HUMAN_TOKS = ["INST", "INT", "LABEL", "REG", "NAME", "ADDRESS", "BYTES", "EOL"];
+HUMAN_AST  = ["INST", "BYTES", "EOF"];
 
 LET    = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 DIG    = "0123456789";
@@ -26,21 +28,24 @@ KEY1   = [
   "nop"
 ];
 KEY2   = [
-  "lda", "ldb", "ldc", "ldd", "lds", "ldg", "push", "int"
+  "lda", "ldb", "ldc", "ldd", "lds", "ldg", "push", "int", "lodsb", "lodgb", "cmp", "inx", "jmne", "ret", "jmp", "call"
 ];
 KEYR   = ["a", "b", "c", "d", "s", "g", "sp", "bp"];
 regids = ["a", "b", "c", "d", "s", "g"];
 
 def PrintTokens(toks: list):
-  for i in toks:
-    if (len(i) == 3):
-      print(f"${hex(i[2])[2:].upper():0>4}: {HUMAN_TOKS[i[0]]} {i[1]}");
-    elif (len(i) == 2):
-      print(f"     : {HUMAN_TOKS[i[0]]} {i[1]}");
+  for i,j in enumerate(toks):
+    if (len(j) == 2):
+      print(f"{i}: {HUMAN_TOKS[j[0]]} {j[1]}");
 
 def PrintAst(toks: list):
   for i in toks:
     print(f"${hex(i[3])[2:].upper():0>4}: {HUMAN_AST[i[0]]} {i[1]} {i[2]}");
+
+def PrintLabs(labs: dict):
+  print("\nLabel symbols:");
+  for i in labs:
+    print(f"{i}: ${hex(labs[i])[2:].upper():0>4}");
 
 # Lexer:
 def Lex(prog: str):
@@ -119,23 +124,17 @@ def Lex(prog: str):
         buf += prog[pos];
         pos += 1;
       if (prog[pos] == ":"):
-        toks.append((T_LAB, buf, cpos));
+        toks.append((T_LAB, buf));
         pos += 1;
       else:
         if (buf in KEY2):
           toks.append((T_INS, buf));
-          if (buf == "int"):
-            bytesmode = 0;
-          # cpos += 2;
-        elif (buf == "bytes"):
-          toks.append((T_BYT));
-          bytesmode = 0;
         elif (buf in KEY1):
           toks.append((T_INS, buf));
-          # cpos += 1;
+        elif (buf == "bytes"):
+          toks.append((T_BYTE, 0));
         else:
           toks.append((T_0ID, buf));
-          # cpos += 2;
       buf = "";
     else:
       print(f"\033[31mUnknown\033[0m character {hex(ord(prog[pos]))[2:].upper():0>2}");
@@ -157,9 +156,10 @@ def RemEmpty(prog: str):
 
 # Parser:
 def Parse(toks: list) -> list:
-  ast = [];
-  pos = 0;
-  pc = 0;
+  labels: dict = {};
+  ast:    list = [];
+  pos:    int  = 0;
+  pc:     int  = 0;
   while (toks[pos][0] != T_EOF):
     if (toks[pos][0] == T_INS): # Parse instruction
       if (toks[pos][1] == "lda"): # LDA
@@ -211,16 +211,20 @@ def Parse(toks: list) -> list:
           print("Unknown ldd operand");
           exit(1);
       elif (toks[pos][1] == "lds"): # LDS
-        if (toks[pos+1][0] == T_INT): # LDS immediate
+        if (toks[pos+1][0] == T_INT): # LDS IMM16
           ast.append([ASTINS, "lds:a", toks[pos+1][1], pc]);
           pc += 4;
           pos += 2;
-        elif (toks[pos+1][0] == T_REG): # LDS register
+        elif (toks[pos+1][0] == T_REG): # LDS REG16
           ast.append([ASTINS, "lds:r", toks[pos+1][1], pc]);
           pc += 3;
           pos += 2;
+        elif (toks[pos+1][0] == T_0ID): # LDS ADDR16
+          ast.append([ASTINS, "lds:b", toks[pos+1][1], pc]);
+          pc += 4;
+          pos += 2;
         else:
-          print("Unknown lds operand");
+          print(f"Unknown lds operand {pos}");
           exit(1);
       elif (toks[pos][1] == "ldg"): # LDG
         if (toks[pos+1][0] == T_INT): # LDG immediate
@@ -246,6 +250,18 @@ def Parse(toks: list) -> list:
         else:
           print("No.");
           exit(1);
+      elif (toks[pos][1] == "lodsb"): # LODSB
+        ast.append([ASTINS, "lodsb:0", 0, pc]);
+        pc += 2;
+        pos += 1;
+      elif (toks[pos][1] == "lodgb"): # LODGB
+        ast.append([ASTINS, "lodgb:0", 0, pc]);
+        pc += 2;
+        pos += 1;
+      elif (toks[pos][1] == "ret"): # RET
+        ast.append([ASTINS, "ret:0", 0, pc]);
+        pc += 1;
+        pos += 1;
       elif (toks[pos][1] == "int"): # INT
         if (toks[pos+1][0] == T_INT): # Interrupt (byte)
           ast.append([ASTINS, "int:f", toks[pos+1][1], pc]);
@@ -254,17 +270,70 @@ def Parse(toks: list) -> list:
         else:
           print("No.");
           exit(1);
+      elif (toks[pos][1] == "inx"): # INX
+        if (toks[pos+1][0] == T_REG): # INX REG16
+          ast.append([ASTINS, "inx:r", toks[pos+1][1], pc]);
+          pc += 3;
+          pos += 2;
+        else:
+          print("No.");
+          exit(1);
+      elif (toks[pos][1] == "call"): # CALL
+        if (toks[pos+1][0] == T_0ID): # CALL Absolute
+          ast.append([ASTINS, "call:b", toks[pos+1][1], pc]);
+          pc += 3;
+          pos += 2;
+        else:
+          print("No.");
+          exit(1);
+      elif (toks[pos][1] == "jmp"): # JMP
+        if (toks[pos+1][0] == T_0ID): # JMP Absolute
+          ast.append([ASTINS, "jmp:b", toks[pos+1][1], pc]);
+          pc += 4;
+          pos += 2;
+        else:
+          print("No.");
+          exit(1);
+      elif (toks[pos][1] == "jmne"): # JMNE
+        if (toks[pos+1][0] == T_0ID): # JMNE Absolute
+          ast.append([ASTINS, "jmne:b", toks[pos+1][1], pc]);
+          pc += 3;
+          pos += 2;
+        else:
+          print("No.");
+          exit(1);
+      elif (toks[pos][1] == "cmp"): # CMP
+        if ((toks[pos+1][0] == T_REG) and (toks[pos+2][0] == T_INT)): # CMP %R $I
+          ast.append([ASTINS, "cmp:ra", [toks[pos+1][1], toks[pos+2][1]], pc]);
+          pc += 5;
+          pos += 3;
+        else:
+          print("No.");
+          exit(1);
       else:
         print(f"Wtf is {toks[pos][1]}");
         exit(1);
+    elif (toks[pos][0] == T_LAB): # Parse a label
+      labels[toks[pos][1]] = pc;
+      pos += 1;
+    elif (toks[pos][0] == T_BYTE): # Parse raw bytes
+      ast.append([ASTBYTES, "__B_raw", [], pc]);
+      pos += 1;
+      while (toks[pos][0] != T_EOL):
+        if (toks[pos][0] == T_INT):
+          ast[-1][2].append(toks[pos][1]);
+          pc += 1;
+        else:
+          print("Your raw bytes are cooked bro.");
+        pos += 1;
     elif (toks[pos][0] == T_EOL): # Parse EOL
       pos += 1;
     else:
-      print(f"Wtf is {toks[pos][0]}");
+      print(f"Wtf is token {toks[pos][0]} at {pos}");
       exit(1);
   ast.append([ASTEOF, 0, 0, pc]);
   print(f"program size: {ast[-1][3]} bytes");
-  return ast;
+  return ast, labels;
 
 # Compiler:
 def CompileGC16X(prog: list, labs: dict):
@@ -327,6 +396,13 @@ def CompileGC16X(prog: list, labs: dict):
         code.append(0xA9);
         code.append(prog[pos][2]);
         pos += 1;
+      elif (prog[pos][1] == "lds:b"): # LDS absolute
+        code.append(0x66);
+        code.append(0x59);
+        val = labs[prog[pos][2]];
+        code.append(val % 256);
+        code.append(val >> 8);
+        pos += 1;
       elif (prog[pos][1] == "ldg:a"): # LDG immediate
         code.append(0x66);
         code.append(0x0A);
@@ -344,19 +420,64 @@ def CompileGC16X(prog: list, labs: dict):
         code.append(prog[pos][2] % 256);
         code.append(prog[pos][2] >> 8);
         pos += 1;
+      elif (prog[pos][1] == "cmp:ra"): # CMP REG16 IMM16
+        code.append(0x10);
+        code.append(0xEE);
+        code.append(prog[pos][2][0] % 256);
+        code.append(prog[pos][2][0] >> 8);
+        code.append(prog[pos][2][1] % 256);
+        pos += 1;
       elif (prog[pos][1] == "push:r"): # PUSH register
         code.append(0x0F);
         code.append(0x90);
         code.append(prog[pos][2]);
         pos += 1;
-      elif (prog[pos][1] == "int:f"): # INT byte
+      elif (prog[pos][1] == "lodsb:0"): # LODSB
+        code.append(0x10);
+        code.append(0x87);
+        pos += 1;
+      elif (prog[pos][1] == "lodgb:0"): # LODGB
+        code.append(0x10);
+        code.append(0x89);
+        pos += 1;
+      elif (prog[pos][1] == "ret:0"): # RET
+        code.append(0x33);
+        pos += 1;
+      elif (prog[pos][1] == "int:f"): # INT IMM8
         code.append(0x0F);
         code.append(0xC2);
         code.append(prog[pos][2] % 256);
         pos += 1;
+      elif (prog[pos][1] == "inx:r"): # INX REG16
+        code.append(0x10);
+        code.append(0xC0+prog[pos][2]);
+        pos += 1;
+      elif (prog[pos][1] == "call:b"): # CALL ADDR16
+        code.append(0xC7);
+        val = labs[prog[pos][2]];
+        code.append(val % 256);
+        code.append(val >> 8);
+        pos += 1;
+      elif (prog[pos][1] == "jmp:b"): # JMP ADDR16
+        code.append(0x0F);
+        code.append(0x30);
+        val = labs[prog[pos][2]];
+        code.append(val % 256);
+        code.append(val >> 8);
+        pos += 1;
+      elif (prog[pos][1] == "jmne:b"): # JMNE ADDR16
+        code.append(0x0F);
+        code.append(0x2A);
+        val = labs[prog[pos][2]];
+        code.append(val % 256);
+        code.append(val >> 8);
+        pos += 1;
       else:
         print(f"\033[31mUnknown\033[0m instruction {prog[pos][1]}");
         exit(1);
+    elif (prog[pos][0] == ASTBYTES):
+      code.extend(prog[pos][2]);
+      pos += 1;
     else:
       print(f"\033[31mUnknown\033[0m token {prog[pos]}");
       print(f"  At position {pos}");
@@ -388,11 +509,12 @@ def main(argc: int, argv: list) -> int:
     src = fl.read();
   src = RemEmpty(src)+"\0";
   tokens, exitcode = Lex(src);
-  # PrintTokens(tokens);
+  PrintTokens(tokens);
   # print(tokens);
-  ast = Parse(tokens);
+  ast, labs = Parse(tokens);
   PrintAst(ast);
-  c, exitcode = CompileGC16X(ast, FetchLabels(ast, diskmode));
+  PrintLabs(labs);
+  c, exitcode = CompileGC16X(ast, labs);
   with open(outname, "wb") as fl:
     fl.write(c);
 
