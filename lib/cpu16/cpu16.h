@@ -151,6 +151,7 @@ U8 INT(GC* gc, bool ri) {
     }
     case INT_WRITE: {
       putchar(StackPop(gc));
+      fflush(stdout);
       break;
     }
     default:

@@ -26,7 +26,7 @@ KEY1   = [
   "nop"
 ];
 KEY2   = [
-  "lda", "ldar", "push", "int"
+  "lda", "ldb", "ldc", "ldd", "lds", "ldg", "push", "int"
 ];
 KEYR   = ["a", "b", "c", "d", "s", "g", "sp", "bp"];
 regids = ["a", "b", "c", "d", "s", "g"];
@@ -79,7 +79,7 @@ def Lex(prog: str):
       pos += 1;
       if (buf in KEYR):
         toks.append((T_REG, KEYR.index(buf)));
-        cpos += 1;
+        # cpos += 1;
       else:
         print(f"\033[31mUnknown\033[0m register {buf}");
         print(f"\033[33m  Note:\033[0m at position {hex(pos)[2:]:0>4}h");
@@ -103,7 +103,7 @@ def Lex(prog: str):
       pos += 1;
       toks.append((T_INT, int(buf, base=16)));
       buf = "";
-      cpos += 1;
+      # cpos += 1;
     elif (prog[pos] in "$"):
       pos += 1;
       while (prog[pos] in DIGEXT):
@@ -163,17 +163,85 @@ def Parse(toks: list) -> list:
   while (toks[pos][0] != T_EOF):
     if (toks[pos][0] == T_INS): # Parse instruction
       if (toks[pos][1] == "lda"): # LDA
-        if (toks[pos+1][0] == T_INT): # LDA absolute
+        if (toks[pos+1][0] == T_INT): # LDA immediate
           ast.append([ASTINS, "lda:a", toks[pos+1][1], pc]);
           pc += 4;
           pos += 2;
+        elif (toks[pos+1][0] == T_REG): # LDA register
+          ast.append([ASTINS, "lda:r", toks[pos+1][1], pc]);
+          pc += 3;
+          pos += 2;
         else:
-          print("No.");
+          print("Unknown lda operand");
+          exit(1);
+      elif (toks[pos][1] == "ldb"): # LDB
+        if (toks[pos+1][0] == T_INT): # LDB immediate
+          ast.append([ASTINS, "ldb:a", toks[pos+1][1], pc]);
+          pc += 4;
+          pos += 2;
+        elif (toks[pos+1][0] == T_REG): # LDB register
+          ast.append([ASTINS, "ldb:r", toks[pos+1][1], pc]);
+          pc += 3;
+          pos += 2;
+        else:
+          print("Unknown ldb operand");
+          exit(1);
+      elif (toks[pos][1] == "ldc"): # LDC
+        if (toks[pos+1][0] == T_INT): # LDC immediate
+          ast.append([ASTINS, "ldc:a", toks[pos+1][1], pc]);
+          pc += 4;
+          pos += 2;
+        elif (toks[pos+1][0] == T_REG): # LDC register
+          ast.append([ASTINS, "ldc:r", toks[pos+1][1], pc]);
+          pc += 3;
+          pos += 2;
+        else:
+          print("Unknown ldc operand");
+          exit(1);
+      elif (toks[pos][1] == "ldd"): # LDD
+        if (toks[pos+1][0] == T_INT): # LDD immediate
+          ast.append([ASTINS, "ldd:a", toks[pos+1][1], pc]);
+          pc += 4;
+          pos += 2;
+        elif (toks[pos+1][0] == T_REG): # LDD register
+          ast.append([ASTINS, "ldd:r", toks[pos+1][1], pc]);
+          pc += 3;
+          pos += 2;
+        else:
+          print("Unknown ldd operand");
+          exit(1);
+      elif (toks[pos][1] == "lds"): # LDS
+        if (toks[pos+1][0] == T_INT): # LDS immediate
+          ast.append([ASTINS, "lds:a", toks[pos+1][1], pc]);
+          pc += 4;
+          pos += 2;
+        elif (toks[pos+1][0] == T_REG): # LDS register
+          ast.append([ASTINS, "lds:r", toks[pos+1][1], pc]);
+          pc += 3;
+          pos += 2;
+        else:
+          print("Unknown lds operand");
+          exit(1);
+      elif (toks[pos][1] == "ldg"): # LDG
+        if (toks[pos+1][0] == T_INT): # LDG immediate
+          ast.append([ASTINS, "ldg:a", toks[pos+1][1], pc]);
+          pc += 4;
+          pos += 2;
+        elif (toks[pos+1][0] == T_REG): # LDG register
+          ast.append([ASTINS, "ldg:r", toks[pos+1][1], pc]);
+          pc += 3;
+          pos += 2;
+        else:
+          print("Unknown ldg operand");
           exit(1);
       elif (toks[pos][1] == "push"): # PUSH
-        if (toks[pos+1][0] == T_INT): # PUSH absolute
+        if (toks[pos+1][0] == T_INT): # PUSH immediate
           ast.append([ASTINS, "push:i", toks[pos+1][1], pc]);
           pc += 4;
+          pos += 2;
+        elif (toks[pos+1][0] == T_REG): # PUSH immediate
+          ast.append([ASTINS, "push:r", toks[pos+1][1], pc]);
+          pc += 3;
           pos += 2;
         else:
           print("No.");
@@ -210,11 +278,76 @@ def CompileGC16X(prog: list, labs: dict):
         code.append(prog[pos][2] % 256);
         code.append(prog[pos][2] >> 8);
         pos += 1;
+      elif (prog[pos][1] == "lda:r"): # LDA register
+        code.append(0x66);
+        code.append(0xA5);
+        code.append(prog[pos][2]);
+        pos += 1;
+      elif (prog[pos][1] == "ldb:a"): # LDB immediate
+        code.append(0x66);
+        code.append(0x06);
+        code.append(prog[pos][2] % 256);
+        code.append(prog[pos][2] >> 8);
+        pos += 1;
+      elif (prog[pos][1] == "ldb:r"): # LDB register
+        code.append(0x66);
+        code.append(0xA6);
+        code.append(prog[pos][2]);
+        pos += 1;
+      elif (prog[pos][1] == "ldc:a"): # LDC immediate
+        code.append(0x66);
+        code.append(0x07);
+        code.append(prog[pos][2] % 256);
+        code.append(prog[pos][2] >> 8);
+        pos += 1;
+      elif (prog[pos][1] == "ldc:r"): # LDC register
+        code.append(0x66);
+        code.append(0xA7);
+        code.append(prog[pos][2]);
+        pos += 1;
+      elif (prog[pos][1] == "ldd:a"): # LDD immediate
+        code.append(0x66);
+        code.append(0x08);
+        code.append(prog[pos][2] % 256);
+        code.append(prog[pos][2] >> 8);
+        pos += 1;
+      elif (prog[pos][1] == "ldd:r"): # LDD register
+        code.append(0x66);
+        code.append(0xA8);
+        code.append(prog[pos][2]);
+        pos += 1;
+      elif (prog[pos][1] == "lds:a"): # LDS immediate
+        code.append(0x66);
+        code.append(0x09);
+        code.append(prog[pos][2] % 256);
+        code.append(prog[pos][2] >> 8);
+        pos += 1;
+      elif (prog[pos][1] == "lds:r"): # LDS register
+        code.append(0x66);
+        code.append(0xA9);
+        code.append(prog[pos][2]);
+        pos += 1;
+      elif (prog[pos][1] == "ldg:a"): # LDG immediate
+        code.append(0x66);
+        code.append(0x0A);
+        code.append(prog[pos][2] % 256);
+        code.append(prog[pos][2] >> 8);
+        pos += 1;
+      elif (prog[pos][1] == "ldg:r"): # LDG register
+        code.append(0x66);
+        code.append(0xAA);
+        code.append(prog[pos][2]);
+        pos += 1;
       elif (prog[pos][1] == "push:i"): # PUSH immediate
         code.append(0x0F);
         code.append(0x84);
         code.append(prog[pos][2] % 256);
         code.append(prog[pos][2] >> 8);
+        pos += 1;
+      elif (prog[pos][1] == "push:r"): # PUSH register
+        code.append(0x0F);
+        code.append(0x90);
+        code.append(prog[pos][2]);
         pos += 1;
       elif (prog[pos][1] == "int:f"): # INT byte
         code.append(0x0F);
