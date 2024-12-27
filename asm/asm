@@ -219,8 +219,8 @@ def Parse(toks: list) -> list:
           ast.append([ASTINS, "lds:r", toks[pos+1][1], pc]);
           pc += 3;
           pos += 2;
-        elif (toks[pos+1][0] == T_0ID): # LDS ADDR16
-          ast.append([ASTINS, "lds:b", toks[pos+1][1], pc]);
+        elif (toks[pos+1][0] == T_0ID): # LDS ADDR16(LABEL)
+          ast.append([ASTINS, "lds:l", toks[pos+1][1], pc]);
           pc += 4;
           pos += 2;
         else:
@@ -390,6 +390,13 @@ def CompileGC16X(prog: list, labs: dict):
         code.append(0x09);
         code.append(prog[pos][2] % 256);
         code.append(prog[pos][2] >> 8);
+        pos += 1;
+      elif (prog[pos][1] == "lds:l"): # LDS immediate (label)
+        code.append(0x66);
+        code.append(0x09);
+        val = labs[prog[pos][2]];
+        code.append(val % 256);
+        code.append(val >> 8);
         pos += 1;
       elif (prog[pos][1] == "lds:r"): # LDS register
         code.append(0x66);
