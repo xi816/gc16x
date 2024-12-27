@@ -17,5 +17,5 @@ main:
   push $00
   int $00
 
-msg: bytes $68 $69 $21 $0A $00
+msg: bytes "If you see this message,$puts is working!! yay!!$^@"
 

@@ -10,7 +10,8 @@ T_REG   = 0x03;
 T_0ID   = 0x04;
 T_ADDR  = 0x05;
 T_BYTE  = 0x06;
-T_EOL   = 0x07;
+T_STR   = 0x07;
+T_EOL   = 0x08;
 T_EOF   = 0xFF;
 
 ASTINS   = 0x00;
@@ -98,6 +99,26 @@ def Lex(prog: str):
         pos += 1;
       pos += 1;
       toks.append((T_INT, int(buf, base=10)));
+      buf = "";
+    elif (prog[pos] in "\""):
+      pos += 1;
+      while (prog[pos] != "\""):
+        print(prog[pos]);
+        if (prog[pos] == "$"):
+          buf += "\n";
+        elif (prog[pos] == "^"):
+          print(f"e cáret");
+          if (ord(prog[pos+1]) in range(64, 97)):
+            print("iō ravgos");
+            buf += chr(ord(prog[pos+1])-64);
+          elif (prog[pos+1] in "^$"):
+            buf += prog[pos+1];
+          pos += 1;
+        else:
+          buf += prog[pos];
+        pos += 1;
+      pos += 1;
+      toks.append((T_STR, buf));
       buf = "";
       # cpos += 1+bytesmode;
     elif (prog[pos] in "^"):
@@ -323,8 +344,13 @@ def Parse(toks: list) -> list:
         if (toks[pos][0] == T_INT):
           ast[-1][2].append(toks[pos][1]);
           pc += 1;
+        elif (toks[pos][0] == T_STR):
+          for i in toks[pos][1]:
+            ast[-1][2].append(ord(i));
+          pc += len(toks[pos][1]);
         else:
           print("Your raw bytes are cooked bro.");
+          exit(1);
         pos += 1;
     elif (toks[pos][0] == T_EOL): # Parse EOL
       pos += 1;
