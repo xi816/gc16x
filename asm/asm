@@ -12,24 +12,22 @@ T_ADDR  = 0x05;
 T_BYTE  = 0x06;
 T_STR   = 0x07;
 T_EOL   = 0x08;
-T_EOF   = 0xFF;
+T_EOF   = 0x09;
 
 ASTINS   = 0x00;
 ASTBYTES = 0x01;
 ASTEOF   = 0x02;
 
-HUMAN_TOKS = ["INST", "INT", "LABEL", "REG", "NAME", "ADDRESS", "BYTES", "EOL"];
+HUMAN_TOKS = ["INST", "INT", "LABEL", "REG", "NAME", "ADDRESS", "BYTES", "STRING", "EOL", "EOF"];
 HUMAN_AST  = ["INST", "BYTES", "EOF"];
 
 LET    = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 DIG    = "0123456789";
 WHI    = " \r\0\t";
 DIGEXT = "0123456789ABCDEF";
-KEY1   = [
-  "nop"
-];
 KEY2   = [
-  "lda", "ldb", "ldc", "ldd", "lds", "ldg", "push", "int", "lodsb", "lodgb", "cmp", "inx", "jmne", "ret", "jmp", "call"
+  "lda", "ldb", "ldc", "ldd", "lds", "ldg", "push", "int", "lodsb", "lodgb", "cmp", "inx", "dex", "jme", "jmne", "ret", "jmp", "call", "nop",
+  "loop", "cop", "storb", "stgrb", "cpuid", "hlt", "pop", "add"
 ];
 KEYR   = ["a", "b", "c", "d", "s", "g", "sp", "bp"];
 regids = ["a", "b", "c", "d", "s", "g"];
@@ -38,6 +36,8 @@ def PrintTokens(toks: list):
   for i,j in enumerate(toks):
     if (len(j) == 2):
       print(f"{i}: {HUMAN_TOKS[j[0]]} {j[1]}");
+    elif (len(j) == 1):
+      print(f"{i}: {HUMAN_TOKS[j[0]]}");
 
 def PrintAst(toks: list):
   for i in toks:
@@ -69,7 +69,8 @@ def Lex(prog: str):
     elif (prog[pos] in WHI):
       pos += 1;
     elif (prog[pos] == "\n"):
-      toks.append((T_EOL,));
+      if (toks[-1][0] != T_EOL):
+        toks.append((T_EOL,));
       pos += 1;
     elif (prog[pos] in "."):
       pos += 1;
@@ -103,13 +104,10 @@ def Lex(prog: str):
     elif (prog[pos] in "\""):
       pos += 1;
       while (prog[pos] != "\""):
-        print(prog[pos]);
         if (prog[pos] == "$"):
           buf += "\n";
         elif (prog[pos] == "^"):
-          print(f"e cáret");
           if (ord(prog[pos+1]) in range(64, 97)):
-            print("iō ravgos");
             buf += chr(ord(prog[pos+1])-64);
           elif (prog[pos+1] in "^$"):
             buf += prog[pos+1];
@@ -149,8 +147,6 @@ def Lex(prog: str):
         pos += 1;
       else:
         if (buf in KEY2):
-          toks.append((T_INS, buf));
-        elif (buf in KEY1):
           toks.append((T_INS, buf));
         elif (buf == "bytes"):
           toks.append((T_BYTE, 0));
@@ -192,6 +188,10 @@ def Parse(toks: list) -> list:
           ast.append([ASTINS, "lda:r", toks[pos+1][1], pc]);
           pc += 3;
           pos += 2;
+        elif (toks[pos+1][0] == T_0ID): # LDA address (label)
+          ast.append([ASTINS, "lda:l", toks[pos+1][1], pc]);
+          pc += 4;
+          pos += 2;
         else:
           print("Unknown lda operand");
           exit(1);
@@ -203,6 +203,10 @@ def Parse(toks: list) -> list:
         elif (toks[pos+1][0] == T_REG): # LDB register
           ast.append([ASTINS, "ldb:r", toks[pos+1][1], pc]);
           pc += 3;
+          pos += 2;
+        elif (toks[pos+1][0] == T_0ID): # LDB address (label)
+          ast.append([ASTINS, "ldb:l", toks[pos+1][1], pc]);
+          pc += 4;
           pos += 2;
         else:
           print("Unknown ldb operand");
@@ -256,6 +260,10 @@ def Parse(toks: list) -> list:
           ast.append([ASTINS, "ldg:r", toks[pos+1][1], pc]);
           pc += 3;
           pos += 2;
+        elif (toks[pos+1][0] == T_0ID): # LDG address (label)
+          ast.append([ASTINS, "ldg:l", toks[pos+1][1], pc]);
+          pc += 4;
+          pos += 2;
         else:
           print("Unknown ldg operand");
           exit(1);
@@ -269,7 +277,19 @@ def Parse(toks: list) -> list:
           pc += 3;
           pos += 2;
         else:
-          print("No.");
+          print("No. PUSH");
+          exit(1);
+      elif (toks[pos][1] == "add"): # ADD
+        if ((toks[pos+1][0] == T_REG) and (toks[pos+2][0] == T_INT)): # ADD %R $I
+          ast.append([ASTINS, "add:ra", [toks[pos+1][1], toks[pos+2][1]], pc]);
+          pc += 5;
+          pos += 3;
+        elif ((toks[pos+1][0] == T_REG) and (toks[pos+2][0] == T_REG)): # ADD %R %R
+          ast.append([ASTINS, "add:c", [toks[pos+1][1], toks[pos+2][1]], pc]);
+          pc += 3;
+          pos += 3;
+        else:
+          print("No. ADD");
           exit(1);
       elif (toks[pos][1] == "lodsb"): # LODSB
         ast.append([ASTINS, "lodsb:0", 0, pc]);
@@ -289,15 +309,31 @@ def Parse(toks: list) -> list:
           pc += 3;
           pos += 2;
         else:
-          print("No.");
+          print("No. INT");
           exit(1);
       elif (toks[pos][1] == "inx"): # INX
         if (toks[pos+1][0] == T_REG): # INX REG16
           ast.append([ASTINS, "inx:r", toks[pos+1][1], pc]);
+          pc += 2;
+          pos += 2;
+        elif (toks[pos+1][0] == T_0ID): # INX ADDR16(LABEL)
+          ast.append([ASTINS, "inx:b", toks[pos+1][1], pc]);
           pc += 3;
           pos += 2;
         else:
-          print("No.");
+          print("No. INX");
+          exit(1);
+      elif (toks[pos][1] == "dex"): # DEX
+        if (toks[pos+1][0] == T_REG): # DEX REG16
+          ast.append([ASTINS, "dex:r", toks[pos+1][1], pc]);
+          pc += 2;
+          pos += 2;
+        elif (toks[pos+1][0] == T_0ID): # DEX ADDR16(LABEL)
+          ast.append([ASTINS, "dex:b", toks[pos+1][1], pc]);
+          pc += 3;
+          pos += 2;
+        else:
+          print("No. INX");
           exit(1);
       elif (toks[pos][1] == "call"): # CALL
         if (toks[pos+1][0] == T_0ID): # CALL Absolute
@@ -305,7 +341,7 @@ def Parse(toks: list) -> list:
           pc += 3;
           pos += 2;
         else:
-          print("No.");
+          print("No. CALL");
           exit(1);
       elif (toks[pos][1] == "jmp"): # JMP
         if (toks[pos+1][0] == T_0ID): # JMP Absolute
@@ -313,24 +349,68 @@ def Parse(toks: list) -> list:
           pc += 4;
           pos += 2;
         else:
-          print("No.");
+          print("No. JMP");
+          exit(1);
+      elif (toks[pos][1] == "jme"): # JME
+        if (toks[pos+1][0] == T_0ID): # JME Absolute
+          ast.append([ASTINS, "jme:b", toks[pos+1][1], pc]);
+          pc += 4;
+          pos += 2;
+        else:
+          print("No. JME");
           exit(1);
       elif (toks[pos][1] == "jmne"): # JMNE
         if (toks[pos+1][0] == T_0ID): # JMNE Absolute
           ast.append([ASTINS, "jmne:b", toks[pos+1][1], pc]);
+          pc += 4;
+          pos += 2;
+        else:
+          print("No. JMNE");
+          exit(1);
+      elif (toks[pos][1] == "loop"): # LOOP
+        if (toks[pos+1][0] == T_0ID): # LOOP Absolute
+          ast.append([ASTINS, "loop:b", toks[pos+1][1], pc]);
           pc += 3;
           pos += 2;
         else:
-          print("No.");
+          print("No. LOOP");
           exit(1);
       elif (toks[pos][1] == "cmp"): # CMP
         if ((toks[pos+1][0] == T_REG) and (toks[pos+2][0] == T_INT)): # CMP %R $I
           ast.append([ASTINS, "cmp:ra", [toks[pos+1][1], toks[pos+2][1]], pc]);
           pc += 5;
           pos += 3;
+        elif ((toks[pos+1][0] == T_REG) and (toks[pos+2][0] == T_REG)): # CMP %R %R
+          ast.append([ASTINS, "cmp:c", [toks[pos+1][1], toks[pos+2][1]], pc]);
+          pc += 3;
+          pos += 3;
         else:
-          print("No.");
+          print("No. CMP");
           exit(1);
+      elif (toks[pos][1] == "nop"): # NOP
+        ast.append([ASTINS, "nop:0", 0, pc]);
+        pc += 1;
+        pos += 1;
+      elif (toks[pos][1] == "hlt"): # HLT
+        ast.append([ASTINS, "hlt:0", 0, pc]);
+        pc += 1;
+        pos += 1;
+      elif (toks[pos][1] == "pop"): # POP
+        ast.append([ASTINS, "pop:r", toks[pos+1][1], pc]);
+        pc += 3;
+        pos += 2;
+      elif (toks[pos][1] == "cpuid"): # CPUID
+        ast.append([ASTINS, "cpuid:0", 0, pc]);
+        pc += 2;
+        pos += 1;
+      elif (toks[pos][1] == "storb"): # STORB
+        ast.append([ASTINS, "storb:r", toks[pos+1][1], pc]);
+        pc += 3;
+        pos += 2;
+      elif (toks[pos][1] == "stgrb"): # STGRB
+        ast.append([ASTINS, "stgrb:r", toks[pos+1][1], pc]);
+        pc += 3;
+        pos += 2;
       else:
         print(f"Wtf is {toks[pos][1]}");
         exit(1);
@@ -378,6 +458,20 @@ def CompileGC16X(prog: list, labs: dict):
         code.append(0xA5);
         code.append(prog[pos][2]);
         pos += 1;
+      elif (prog[pos][1] == "lda:b"): # LDA absolute
+        code.append(0x66);
+        code.append(0x55);
+        val = labs[prog[pos][2]];
+        code.append(val % 256);
+        code.append(val >> 8);
+        pos += 1;
+      elif (prog[pos][1] == "lda:l"): # LDA immediate (label)
+        code.append(0x66);
+        code.append(0x05);
+        val = labs[prog[pos][2]];
+        code.append(val % 256);
+        code.append(val >> 8);
+        pos += 1;
       elif (prog[pos][1] == "ldb:a"): # LDB immediate
         code.append(0x66);
         code.append(0x06);
@@ -388,6 +482,20 @@ def CompileGC16X(prog: list, labs: dict):
         code.append(0x66);
         code.append(0xA6);
         code.append(prog[pos][2]);
+        pos += 1;
+      elif (prog[pos][1] == "ldb:l"): # LDB immediate (label)
+        code.append(0x66);
+        code.append(0x06);
+        val = labs[prog[pos][2]];
+        code.append(val % 256);
+        code.append(val >> 8);
+        pos += 1;
+      elif (prog[pos][1] == "ldb:b"): # LDB absolute
+        code.append(0x66);
+        code.append(0x56);
+        val = labs[prog[pos][2]];
+        code.append(val % 256);
+        code.append(val >> 8);
         pos += 1;
       elif (prog[pos][1] == "ldc:a"): # LDC immediate
         code.append(0x66);
@@ -447,6 +555,13 @@ def CompileGC16X(prog: list, labs: dict):
         code.append(0xAA);
         code.append(prog[pos][2]);
         pos += 1;
+      elif (prog[pos][1] == "ldg:l"): # LDG immediate (label)
+        code.append(0x66);
+        code.append(0x0A);
+        val = labs[prog[pos][2]];
+        code.append(val % 256);
+        code.append(val >> 8);
+        pos += 1;
       elif (prog[pos][1] == "push:i"): # PUSH immediate
         code.append(0x0F);
         code.append(0x84);
@@ -459,6 +574,16 @@ def CompileGC16X(prog: list, labs: dict):
         code.append(prog[pos][2][0] % 256);
         code.append(prog[pos][2][0] >> 8);
         code.append(prog[pos][2][1] % 256);
+        pos += 1;
+      elif (prog[pos][1] == "cmp:c"): # CMP REG16 REG16
+        code.append(0x10);
+        code.append(0xF6); # A B C D S G SP BP
+        code.append((prog[pos][2][0]*8)+(prog[pos][2][1]));
+        pos += 1;
+      elif (prog[pos][1] == "add:c"): # ADD REG16 REG16
+        code.append(0x10);
+        code.append(0x00); # A B C D S G SP BP
+        code.append((prog[pos][2][0]*8)+(prog[pos][2][1]));
         pos += 1;
       elif (prog[pos][1] == "push:r"): # PUSH register
         code.append(0x0F);
@@ -476,6 +601,10 @@ def CompileGC16X(prog: list, labs: dict):
       elif (prog[pos][1] == "ret:0"): # RET
         code.append(0x33);
         pos += 1;
+      elif (prog[pos][1] == "cpuid:0"): # CPUID
+        code.append(0x0F);
+        code.append(0xE9);
+        pos += 1;
       elif (prog[pos][1] == "int:f"): # INT IMM8
         code.append(0x0F);
         code.append(0xC2);
@@ -484,6 +613,22 @@ def CompileGC16X(prog: list, labs: dict):
       elif (prog[pos][1] == "inx:r"): # INX REG16
         code.append(0x10);
         code.append(0xC0+prog[pos][2]);
+        pos += 1;
+      elif (prog[pos][1] == "dex:r"): # DEX REG16
+        code.append(0x10);
+        code.append(0xD0+prog[pos][2]);
+        pos += 1;
+      elif (prog[pos][1] == "inx:b"): # INX ADDR16
+        code.append(0xB0);
+        val = labs[prog[pos][2]];
+        code.append(val % 256);
+        code.append(val >> 8);
+        pos += 1;
+      elif (prog[pos][1] == "dex:b"): # DEX ADDR16
+        code.append(0x90);
+        val = labs[prog[pos][2]];
+        code.append(val % 256);
+        code.append(val >> 8);
         pos += 1;
       elif (prog[pos][1] == "call:b"): # CALL ADDR16
         code.append(0xC7);
@@ -498,12 +643,46 @@ def CompileGC16X(prog: list, labs: dict):
         code.append(val % 256);
         code.append(val >> 8);
         pos += 1;
+      elif (prog[pos][1] == "jme:b"): # JME ADDR16
+        code.append(0x0F);
+        code.append(0x29);
+        val = labs[prog[pos][2]];
+        code.append(val % 256);
+        code.append(val >> 8);
+        pos += 1;
       elif (prog[pos][1] == "jmne:b"): # JMNE ADDR16
         code.append(0x0F);
         code.append(0x2A);
         val = labs[prog[pos][2]];
         code.append(val % 256);
         code.append(val >> 8);
+        pos += 1;
+      elif (prog[pos][1] == "loop:b"): # LOOP ADDR16
+        code.append(0xB8);
+        val = labs[prog[pos][2]];
+        code.append(val % 256);
+        code.append(val >> 8);
+        pos += 1;
+      elif (prog[pos][1] == "nop:0"): # NOP
+        code.append(0xEA);
+        pos += 1;
+      elif (prog[pos][1] == "hlt:0"): # HLT
+        code.append(0x51);
+        pos += 1;
+      elif (prog[pos][1] == "pop:r"): # POP
+        code.append(0x0F);
+        code.append(0x80);
+        code.append(prog[pos][2] % 256);
+        pos += 1;
+      elif (prog[pos][1] == "storb:r"): # STORB
+        code.append(0x10);
+        code.append(0x80);
+        code.append(prog[pos][2] % 256);
+        pos += 1;
+      elif (prog[pos][1] == "stgrb:r"): # STGRB
+        code.append(0x10);
+        code.append(0x81);
+        code.append(prog[pos][2] % 256);
         pos += 1;
       else:
         print(f"\033[31mUnknown\033[0m instruction {prog[pos][1]}");

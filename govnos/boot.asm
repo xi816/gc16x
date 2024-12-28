@@ -183,7 +183,7 @@ com-govnos-input:
   lodgb
   add %s %g
   storb %d
-  inc commi
+  inx commi
   cmp %d $0A ; Check for Enter
   jmne com-govnos-input
   jmp com-govnos-process
@@ -193,7 +193,7 @@ com-govnos-bs: ; Handle backspace ($7F or $08)
   cmp %g $00
   jme com-govnos-input
 com-govnos-bs-strict:
-  dec commi
+  dex commi
   lds bs-seq
   call puts
   jmp com-govnos-input
@@ -208,6 +208,9 @@ com-govnos-process: ; Process the command
   ldd $00
   lodgb
   storb %d ; Load $00 (NUL) instead of $0A (Enter)
+
+  lds exec-statusM
+  call puts
 
   ; Empty command
   lda comm
@@ -336,6 +339,7 @@ help-msg:      bytes "GovnOS Help manual page 1/1$"
                bytes "  help      Show help$"
                bytes "  hlt       Halt the system (Kernel panic 6,0)$"
                bytes "  retr      Restart the shell$^@"
+exec-statusM:  bytes "Executing command ...$^@"
 
 ; Kernel panic
 ; 0 - Processor error
@@ -361,8 +365,8 @@ drvDSC-msg:    bytes "Disk disconnected, A/ is an empty byte stream.$"
 env-PS:        bytes "A/^$ ^@^@^@^@^@^@^@"
 
 ; Control sequences
-bs-seq:        bytes ^08 ^20 ^08 "^@"
-cls-seq:       bytes ^1B ^5B ^48 ^1B ^5B ^32 ^4A "^@"
+bs-seq:        bytes $08 $20 $08 "^@"
+cls-seq:       bytes $1B $5B $48 $1B $5B $32 $4A "^@"
 
 ; Commands
 instFULL-dir:  bytes "dir^@"
