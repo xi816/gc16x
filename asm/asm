@@ -573,8 +573,8 @@ def CompileGC16X(prog: list, labs: dict):
         code.append(0x10);
         code.append(0xEE);
         code.append(prog[pos][2][0] % 256);
-        code.append(prog[pos][2][0] >> 8);
         code.append(prog[pos][2][1] % 256);
+        code.append(prog[pos][2][1] >> 8);
         pos += 1;
       elif (prog[pos][1] == "cmp:c"): # CMP REG16 REG16
         code.append(0x10);

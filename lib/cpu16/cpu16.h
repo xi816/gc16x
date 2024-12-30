@@ -67,7 +67,7 @@ gcword StackPop(GC* gc) {
 // Register clusters can only be used for reading data,
 // writing is not allowed.
 gcrc_t ReadRegClust(U8 clust) { // Read a register cluster
-  gcrc_t rc = {clust/10, clust%10};
+  gcrc_t rc = {clust/8, clust%8};
   return rc;
 }
 
@@ -1103,14 +1103,17 @@ U8 Exec(GC gc, const U32 memsize) {
   while (!exc) {
     exc = (INSTS[gc.mem[gc.r.PC]])(&gc);
     /*
+    for (U32 i = 0; i < 0x20; i++) {
+      printf("%02X ", gc.mem[0x619 + i]);
+    }
+    printf("  \033[32m%04X %04X\033[0m\n", gc.r.S, gc.r.G);
+    */
+    /*
     getchar();
     fputs("\033[H\033[2J", stdout);
     StackDump(gc, 10);
     RegDump(gc);
     printf("PC: %04X\n", gc.r.PC);
-    for (U32 i = 0; i < 0x12; i++) {
-      printf("%04X: %02X\n", 0x22F + i, gc.mem[0x22F + i]);
-    }
     puts("\0");
     */
   }
