@@ -182,15 +182,15 @@ def Parse(toks: list) -> list:
       if (toks[pos][1] == "lda"): # LDA
         if (toks[pos+1][0] == T_INT): # LDA immediate
           ast.append([ASTINS, "lda:a", toks[pos+1][1], pc]);
-          pc += 4;
+          pc += 4; # 66 05 00 00
           pos += 2;
         elif (toks[pos+1][0] == T_REG): # LDA register
           ast.append([ASTINS, "lda:r", toks[pos+1][1], pc]);
-          pc += 3;
+          pc += 3; # 66 A5 00
           pos += 2;
         elif (toks[pos+1][0] == T_0ID): # LDA address (label)
           ast.append([ASTINS, "lda:l", toks[pos+1][1], pc]);
-          pc += 4;
+          pc += 4; # 66 05 71 05
           pos += 2;
         else:
           print("Unknown lda operand");
@@ -270,11 +270,11 @@ def Parse(toks: list) -> list:
       elif (toks[pos][1] == "push"): # PUSH
         if (toks[pos+1][0] == T_INT): # PUSH immediate
           ast.append([ASTINS, "push:i", toks[pos+1][1], pc]);
-          pc += 4;
+          pc += 4; # 0F 84 00 00
           pos += 2;
         elif (toks[pos+1][0] == T_REG): # PUSH immediate
           ast.append([ASTINS, "push:r", toks[pos+1][1], pc]);
-          pc += 3;
+          pc += 3; # 0F 90 04
           pos += 2;
         else:
           print("No. PUSH");
@@ -528,6 +528,7 @@ def CompileGC16X(prog: list, labs: dict):
       elif (prog[pos][1] == "lds:l"): # LDS immediate (label)
         code.append(0x66);
         code.append(0x09);
+        print(prog[pos]);
         val = labs[prog[pos][2]];
         code.append(val % 256);
         code.append(val >> 8);
