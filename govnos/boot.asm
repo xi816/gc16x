@@ -172,8 +172,6 @@ com-govnos-prompt: ; Print the prompt
 com-govnos-input:
   int $01    ; Get character from input
   pop %d     ; Save to D register
-  cmp %d $04 ; Check for Backspace (1)
-  jme com-govnos-term
   cmp %d $7F ; Check for Backspace (1)
   jme com-govnos-bs
   cmp %d $08 ; Check for Backspace (2)
@@ -373,6 +371,7 @@ help-msg:      bytes "GovnOS Help manual page 1/1$"
                bytes "  dir       List directories$"
                bytes "  drive     Show if any drive is connected$"
                bytes "  exit      Exit$"
+               bytes "  gsfetch   Show system info$"
                bytes "  help      Show help$"
                bytes "  hlt       Halt the system (Kernel panic 6,0)$"
                bytes "  retr      Restart the shell$^@"
