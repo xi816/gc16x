@@ -265,6 +265,13 @@ com-govnos-process: ; Process the command
   cmp %a $00
   jme com-govnosEXEC-drive
 
+  ; gsfetch
+  lda comm
+  ldb instFULL-gsfc
+  call strcmp
+  cmp %a $00
+  jme com-govnosEXEC-gsfetch
+
   ; Otherwise it's a bad instruction
   lds bad-inst-msg
   call puts
@@ -308,6 +315,38 @@ com-govnosEXEC-driveDSC:
   call puts
   jmp com-govnos-aftexec
 
+com-govnosEXEC-gsfetch:
+  lds gsfc-stM
+  call puts
+
+  lds gsfc-hostM ; Host
+  call puts
+  lds env-PCNAME
+  call puts
+
+  lds gsfc-osM ; OS
+  call puts
+  lds envc-OSNAME
+  call puts
+
+  lds gsfc-cpuM ; CPU
+  call puts
+  ldd $00
+  cpuid
+  cmp %d $00
+  jme com-govnosEXEC-gsfetch-gc16x
+
+  lds proc-unkM
+  call puts
+  jmp com-govnosEXEC-gsfetch-end
+com-govnosEXEC-gsfetch-gc16x:
+  lds proc-00M
+  call puts
+com-govnosEXEC-gsfetch-end:
+  push $0A
+  int $02
+  jmp com-govnos-aftexec
+
 com-govnosEXEC-exit:
   lds exit-term-msg
   call puts
@@ -338,6 +377,11 @@ help-msg:      bytes "GovnOS Help manual page 1/1$"
                bytes "  hlt       Halt the system (Kernel panic 6,0)$"
                bytes "  retr      Restart the shell$^@"
 exec-statusM:  bytes "Executing command ...$^@"
+; GSFETCH
+gsfc-stM:      bytes     $1B "[97mgsfetch$" $1B "[0m---------$^@"
+gsfc-hostM:    bytes     $1B "[97mHost: " $1B "[0m^@"
+gsfc-osM:      bytes $0A $1B "[97mOS: " $1B "[0m^@"
+gsfc-cpuM:     bytes $0A $1B "[97mCPU: " $1B "[0m^@"
 
 ; Kernel panic
 ; 0 - Processor error
@@ -353,6 +397,8 @@ kp-41-0msg:    bytes "Kernel panic: Kernel error(41,0)$^@"
 procchk-msg:   bytes "[0000] Checking CPU$^@"
 proc-00-msg:   bytes "[0001] CPU: Govno Core 16X$$^@"
 proc-unk-msg:  bytes "[0001] CPU: Unknown$$^@"
+proc-00M:      bytes "Govno Core 16X$^@"
+proc-unkM:     bytes "Unknown :($^@"
 
 drvCNN-msg:    bytes "Disk connected as A/$^@"
 drvDSC-msg:    bytes "Disk disconnected, A/ is an empty byte stream.$"
@@ -361,6 +407,9 @@ drvDSC-msg:    bytes "Disk disconnected, A/ is an empty byte stream.$"
 ; Environment variables
 ; 11 bytes
 env-PS:        bytes "A/^$ ^@^@^@^@^@^@^@"
+env-PCNAME:    bytes "GovnPC Ultra^@^@^@^@"
+; Constant environment variables
+envc-OSNAME:   bytes "GovnOS 0.0.1^@^@^@^@"
 
 ; Control sequences
 bs-seq:        bytes $08 $20 $08 "^@"
@@ -374,6 +423,7 @@ instFULL-hlt:  bytes "hlt^@"
 instFULL-exit: bytes "exit^@"
 instFULL-retr: bytes "retr^@"
 instFULL-drve: bytes "drive^@"
+instFULL-gsfc: bytes "gsfetch^@"
 bad-inst-msg:  bytes "Bad command.$^@"
 
 ; Buffers
