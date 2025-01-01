@@ -1,8 +1,7 @@
 jmp main
 
 strtok:
-  ldg $01
-  add %s %g
+  add %s $01
   ldd %s
   lodsb
   ldc %s
@@ -18,10 +17,11 @@ main:
   ldb $20
   call strtok
 
-  lda #48
   lds *dynptr
-  add %s %a
+  add %s #48
   push %s
+  int $02
+  push $0A
   int $02
   push $00
   int $00

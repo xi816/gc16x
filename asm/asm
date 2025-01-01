@@ -314,7 +314,7 @@ def Parse(toks: list) -> list:
       elif (toks[pos][1] == "add"): # ADD
         if ((toks[pos+1][0] == T_REG) and (toks[pos+2][0] == T_INT)): # ADD %R $I
           ast.append([ASTINS, "add:ra", [toks[pos+1][1], toks[pos+2][1]], pc]);
-          pc += 5;
+          pc += 4;
           pos += 3;
         elif ((toks[pos+1][0] == T_REG) and (toks[pos+2][0] == T_REG)): # ADD %R %R
           ast.append([ASTINS, "add:c", [toks[pos+1][1], toks[pos+2][1]], pc]);
@@ -650,6 +650,12 @@ def CompileGC16X(prog: list, labs: dict):
         code.append(0x10);
         code.append(0x00); # A B C D S G SP BP
         code.append((prog[pos][2][0]*8)+(prog[pos][2][1]));
+        pos += 1;
+      elif (prog[pos][1] == "add:ra"): # ADD REG16 IMM16
+        code.append(0x10);
+        code.append(0x08+prog[pos][2][0]);
+        code.append(prog[pos][2][1] % 256);
+        code.append(prog[pos][2][1] >> 8);
         pos += 1;
       elif (prog[pos][1] == "sub:c"): # SUB REG16 REG16
         code.append(0x10);
