@@ -11,14 +11,15 @@ T_0ID   = 0x04;
 T_ADDR  = 0x05;
 T_BYTE  = 0x06;
 T_STR   = 0x07;
-T_EOL   = 0x08;
-T_EOF   = 0x09;
+T_IDD   = 0x08;
+T_EOL   = 0x09;
+T_EOF   = 0x0A;
 
 ASTINS   = 0x00;
 ASTBYTES = 0x01;
 ASTEOF   = 0x02;
 
-HUMAN_TOKS = ["INST", "INT", "LABEL", "REG", "NAME", "ADDRESS", "BYTES", "STRING", "EOL", "EOF"];
+HUMAN_TOKS = ["INST", "INT", "LABEL", "REG", "NAME", "ADDRESS", "BYTES", "STRING", "DRF-NAME", "EOL", "EOF"];
 HUMAN_AST  = ["INST", "BYTES", "EOF"];
 
 LET    = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
@@ -101,7 +102,7 @@ def Lex(prog: str):
       pos += 1;
       toks.append((T_INT, int(buf, base=10)));
       buf = "";
-    elif (prog[pos] in "\""):
+    elif (prog[pos] == "\""):
       pos += 1;
       while (prog[pos] != "\""):
         if (prog[pos] == "$"):
@@ -119,7 +120,7 @@ def Lex(prog: str):
       toks.append((T_STR, buf));
       buf = "";
       # cpos += 1+bytesmode;
-    elif (prog[pos] in "^"):
+    elif (prog[pos] == "^"):
       pos += 1;
       while (prog[pos] in DIGEXT):
         buf += prog[pos];
@@ -128,7 +129,7 @@ def Lex(prog: str):
       toks.append((T_INT, int(buf, base=16)));
       buf = "";
       # cpos += 1;
-    elif (prog[pos] in "$"):
+    elif (prog[pos] == "$"):
       pos += 1;
       while (prog[pos] in DIGEXT):
         buf += prog[pos];
@@ -138,6 +139,13 @@ def Lex(prog: str):
       buf = "";
       # cpos += 1+bytesmode;
       # bytesmode = 1;
+    elif (prog[pos] == "*"):
+      pos += 1;
+      while (prog[pos] in LET+DIG+"-"):
+        buf += prog[pos];
+        pos += 1;
+      toks.append((T_IDD, buf));
+      buf = "";
     elif (prog[pos] in LET):
       while (prog[pos] in LET+DIG+"-"):
         buf += prog[pos];
@@ -246,6 +254,10 @@ def Parse(toks: list) -> list:
           pos += 2;
         elif (toks[pos+1][0] == T_0ID): # LDS ADDR16(LABEL)
           ast.append([ASTINS, "lds:l", toks[pos+1][1], pc]);
+          pc += 4;
+          pos += 2;
+        elif (toks[pos+1][0] == T_IDD): # LDS DRF ADDR16(LABEL)
+          ast.append([ASTINS, "lds:b", toks[pos+1][1], pc]);
           pc += 4;
           pos += 2;
         else:
@@ -723,7 +735,7 @@ def main(argc: int, argv: list) -> int:
   src = RemEmpty(src)+"\0";
   tokens, exitcode = Lex(src);
   PrintTokens(tokens);
-  # print(tokens);
+  print(tokens);
   ast, labs = Parse(tokens);
   PrintAst(ast);
   PrintLabs(labs);

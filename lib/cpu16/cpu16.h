@@ -1139,10 +1139,6 @@ U8 Exec(GC gc, const U32 memsize) {
   U8 exc = 0;
   while (!exc) {
     exc = (INSTS[gc.mem[gc.r.PC]])(&gc);
-    getchar();
-    fputs("\033[H\033[2J", stdout);
-    StackDump(gc, 10);
-    RegDump(gc);
     /*
     for (U32 i = 0; i < 0x20; i++) {
       printf("%02X ", gc.mem[0x619 + i]);
