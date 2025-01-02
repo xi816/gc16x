@@ -950,8 +950,7 @@ U8 DEXM(GC* gc) {   // 90
 }
 
 U8 ASL(GC* gc) {    // A0-A7
-  puts("asl %a");
-  U16* rgptr = ReadReg(gc, gc->mem[gc->r.PC]-0xA0) 
+  U16* rgptr = ReadReg(gc, gc->mem[gc->r.PC]-0xA0);
   *rgptr = *rgptr << gc->mem[gc->r.PC+1];
   gc->r.PC += 2;
   return 0;
@@ -1157,10 +1156,6 @@ U8 Exec(GC gc, const U32 memsize) {
   U8 exc = 0;
   while (!exc) {
     exc = (INSTS[gc.mem[gc.r.PC]])(&gc);
-    getchar();
-    fputs("\033[H\033[2J", stdout);
-    StackDump(gc, 10);
-    RegDump(gc);
     /*
     for (U32 i = 0; i < 0x20; i++) {
       printf("%02X ", gc.mem[0x619 + i]);
@@ -1168,6 +1163,10 @@ U8 Exec(GC gc, const U32 memsize) {
     printf("  \033[32m%04X %04X\033[0m\n", gc.r.S, gc.r.G);
     */
     /*
+    getchar();
+    fputs("\033[H\033[2J", stdout);
+    StackDump(gc, 10);
+    RegDump(gc);
     printf("PC: %04X\n", gc.r.PC);
     puts("\0");
     */
