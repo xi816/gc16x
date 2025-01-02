@@ -41,6 +41,10 @@ gcword ReadWord(GC gc, U16 addr) {
   return (gc.mem[addr]) + (gc.mem[addr+1] << 8);
 }
 
+gcword ReadWordRev(GC gc, U16 addr) {
+  return (gc.mem[addr] << 8) + (gc.mem[addr+1]);
+}
+
 gcword* ReadReg(GC* gc, U8 regid) {
   // PC register cannot be changed from
   // {REG} addressing instruction. It
@@ -945,6 +949,20 @@ U8 DEXM(GC* gc) {   // 90
   return 0;
 }
 
+U8 ASL(GC* gc) {    // A0-A7
+  puts("asl %a");
+  U16* rgptr = ReadReg(gc, gc->mem[gc->r.PC]-0xA0) 
+  *rgptr = *rgptr << gc->mem[gc->r.PC+1];
+  gc->r.PC += 2;
+  return 0;
+}
+
+U8 ASR(GC* gc) {    // E0-E8
+  *ReadReg(gc, gc->mem[gc->r.PC]-0xE0) >> gc->mem[gc->r.PC+1];
+  gc->r.PC += 2;
+  return 0;
+}
+
 U8 INXM(GC* gc) {   // B0
   gc->mem[ReadWord(*gc, gc->r.PC+1)]++;
   gc->r.PC += 3;
@@ -996,11 +1014,11 @@ U8 (*INSTS[256])() = {
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &PG83 , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &DEXM , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
-  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &ASL  , &ASL  , &ASL  , &ASL  , &ASL  , &ASL  , &ASL  , &ASL  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &INXM , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &LOOP , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &CALL , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
-  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &COP1 , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
-  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &NOP  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &ASL  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &COP1 , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &ASR  , &ASR  , &ASR  , &ASR  , &ASR  , &ASR  , &ASR  , &ASR  , &UNK  , &UNK  , &NOP  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK
 };
 
@@ -1139,6 +1157,10 @@ U8 Exec(GC gc, const U32 memsize) {
   U8 exc = 0;
   while (!exc) {
     exc = (INSTS[gc.mem[gc.r.PC]])(&gc);
+    getchar();
+    fputs("\033[H\033[2J", stdout);
+    StackDump(gc, 10);
+    RegDump(gc);
     /*
     for (U32 i = 0; i < 0x20; i++) {
       printf("%02X ", gc.mem[0x619 + i]);

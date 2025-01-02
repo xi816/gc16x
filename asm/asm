@@ -12,15 +12,17 @@ T_ADDR  = 0x05;
 T_BYTE  = 0x06;
 T_STR   = 0x07;
 T_IDD   = 0x08;
-T_EOL   = 0x09;
-T_EOF   = 0x0A;
+T_MCR   = 0x09;
+T_EOL   = 0x0A;
+T_EOF   = 0x0B;
 
 ASTINS   = 0x00;
 ASTBYTES = 0x01;
-ASTEOF   = 0x02;
+ASTBRKH  = 0x02;
+ASTEOF   = 0x03;
 
-HUMAN_TOKS = ["INST", "INT", "LABEL", "REG", "NAME", "ADDRESS", "BYTES", "STRING", "DRF-NAME", "EOL", "EOF"];
-HUMAN_AST  = ["INST", "BYTES", "EOF"];
+HUMAN_TOKS = ["INST", "INT", "LABEL", "REG", "NAME", "ADDRESS", "BYTES", "STRING", "DRF-NAME", "MCR", "EOL", "EOF"];
+HUMAN_AST  = ["INST", "BYTES", "BRK-HANDLER", "EOF"];
 
 LET    = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 DIG    = "0123456789";
@@ -28,7 +30,7 @@ WHI    = " \r\0\t";
 DIGEXT = "0123456789ABCDEF";
 KEY2   = [
   "lda", "ldb", "ldc", "ldd", "lds", "ldg", "push", "int", "lodsb", "lodgb", "cmp", "inx", "dex", "jme", "jmne", "ret", "jmp", "call", "nop",
-  "loop", "cop", "storb", "stgrb", "cpuid", "hlt", "pop", "add", "sub"
+  "loop", "cop", "storb", "stgrb", "cpuid", "hlt", "pop", "add", "sub", "brk"
 ];
 KEYR   = ["a", "b", "c", "d", "s", "g", "sp", "bp"];
 regids = ["a", "b", "c", "d", "s", "g"];
@@ -70,7 +72,7 @@ def Lex(prog: str):
     elif (prog[pos] in WHI):
       pos += 1;
     elif (prog[pos] == "\n"):
-      if (toks[-1][0] != T_EOL):
+      if ((toks) and (toks[-1][0] != T_EOL)):
         toks.append((T_EOL,));
       pos += 1;
     elif (prog[pos] in "."):
@@ -145,6 +147,13 @@ def Lex(prog: str):
         buf += prog[pos];
         pos += 1;
       toks.append((T_IDD, buf));
+      buf = "";
+    elif (prog[pos] == "~"):
+      pos += 1;
+      while (prog[pos] in LET+DIG+"-"):
+        buf += prog[pos];
+        pos += 1;
+      toks.append((T_MCR, buf));
       buf = "";
     elif (prog[pos] in LET):
       while (prog[pos] in LET+DIG+"-"):
@@ -455,6 +464,10 @@ def Parse(toks: list) -> list:
         ast.append([ASTINS, "stgrb:r", toks[pos+1][1], pc]);
         pc += 3;
         pos += 2;
+      elif (toks[pos][1] == "brk"): # BRK
+        ast.append([ASTINS, "brk:0", 0, pc]);
+        pc += 1;
+        pos += 1;
       else:
         print(f"Wtf is {toks[pos][1]}");
         exit(1);
@@ -739,6 +752,9 @@ def CompileGC16X(prog: list, labs: dict):
         val = labs[prog[pos][2]];
         code.append(val % 256);
         code.append(val >> 8);
+        pos += 1;
+      elif (prog[pos][1] == "brk:0"): # BRK
+        code.append(0x00);
         pos += 1;
       elif (prog[pos][1] == "nop:0"): # NOP
         code.append(0xEA);
