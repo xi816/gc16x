@@ -38,6 +38,23 @@ puts:
   jmne puts
   ret
 
+; strtok - Progress the string pointer until character
+; Arguments:
+; S - string address
+; B - end character
+; (also affects dynptr)
+strtok:
+  add %s $01
+  ldd %s
+  lodsb
+  ldc %s
+  lds %d
+  sub %c %b
+  inx dynptr
+  ldd $00
+  loop strtok
+  ret
+
 ; inttostr - Convert a 16-bit integer into a string
 ; Arguments:
 ; A - Number
@@ -86,6 +103,32 @@ strcmp-eq:
   lda $00
   ret
 strcmp-fail:
+  lda $01
+  ret
+
+; pstrcmp - Check if two strings are equal ending in some character
+; Arguments:
+; A - first string address
+; B - second string address
+; C - character
+; Returns:
+; A - status
+pstrcmp:
+  lds %a
+  ldg %b
+  lodsb
+  lodgb
+  cmp %s %g
+  jmne pstrcmp-fail
+  cmp %s %c
+  jme pstrcmp-eq
+  inx %a
+  inx %b
+  jmp pstrcmp
+pstrcmp-eq:
+  lda $00
+  ret
+pstrcmp-fail:
   lda $01
   ret
 
@@ -249,6 +292,14 @@ com-govnos-process: ; Process the command
   cmp %a $00
   jme com-govnosEXEC-exit
 
+  ; exit
+  lda comm
+  ldb instFULL-echo
+  ldc $20 ; compare until space
+  call pstrcmp
+  cmp %a $00
+  jme com-govnosEXEC-echo
+
   ; retr
   lda comm
   ldb instFULL-retr
@@ -345,6 +396,18 @@ com-govnosEXEC-gsfetch-end:
   int $02
   jmp com-govnos-aftexec
 
+com-govnosEXEC-echo:
+  ; Progress to space
+  lds comm
+  ldb $20
+  call strtok
+  inx %s
+  call puts
+  push $0A
+  int $02
+
+  jmp com-govnos-aftexec
+
 com-govnosEXEC-exit:
   lds exit-term-msg
   call puts
@@ -410,6 +473,9 @@ env-PCNAME:    bytes "GovnPC Ultra^@^@^@^@"
 ; Constant environment variables
 envc-OSNAME:   bytes "GovnOS 0.0.1^@^@^@^@"
 
+; Data
+dynptr:        bytes $00
+
 ; Control sequences
 bs-seq:        bytes $08 $20 $08 "^@"
 cls-seq:       bytes $1B $5B $48 $1B $5B $32 $4A "^@"
@@ -420,6 +486,7 @@ instFULL-cls:  bytes "cls^@"
 instFULL-help: bytes "help^@"
 instFULL-hlt:  bytes "hlt^@"
 instFULL-exit: bytes "exit^@"
+instFULL-echo: bytes "echo "
 instFULL-retr: bytes "retr^@"
 instFULL-drve: bytes "drive^@"
 instFULL-gsfc: bytes "gsfetch^@"

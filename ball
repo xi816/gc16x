@@ -2,7 +2,7 @@
 . balld/balld
 
 build_state "CGovnOS"     "./"
-build_state "mkfs.govnfs" "core/mkfs.govnfs/"
+# build_state "mkfs.govnfs" "core/mkfs.govnfs/"
 build_state "gasman"      "core/gasman/"
 build_state "gboot"       "core/gboot/"
 build_state "ugovnfs"     "core/ugovnfs/"
