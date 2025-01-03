@@ -1,8 +1,18 @@
 #!/usr/bin/bash
-. balld/balld
+print_state() {
+  printf "building $1\n"
+}
+completed_state() {
+  printf "Compilation finished\n"
+}
+build_state() {
+  print_state $1
+  cd $2
+  ./build
+  cd - > /dev/null
+}
 
 build_state "CGovnOS"     "./"
-# build_state "mkfs.govnfs" "core/mkfs.govnfs/"
 build_state "gasman"      "core/gasman/"
 build_state "gboot"       "core/gboot/"
 build_state "ugovnfs"     "core/ugovnfs/"
