@@ -30,7 +30,7 @@ WHI    = " \r\0\t";
 DIGEXT = "0123456789ABCDEF";
 KEY2   = [
   "lda", "ldb", "ldc", "ldd", "lds", "ldg", "push", "int", "lodsb", "lodgb", "cmp", "inx", "dex", "jme", "jmne", "ret", "jmp", "call", "nop",
-  "loop", "cop", "storb", "stgrb", "cpuid", "hlt", "pop", "add", "sub", "brk"
+  "loop", "cop", "storb", "stgrb", "cpuid", "hlt", "pop", "add", "sub", "div", "brk"
 ];
 KEYR   = ["a", "b", "c", "d", "s", "g", "sp", "bp"];
 regids = ["a", "b", "c", "d", "s", "g"];
@@ -245,6 +245,10 @@ def Parse(toks: list) -> list:
           ast.append([ASTINS, "ldc:r", toks[pos+1][1], pc]);
           pc += 3;
           pos += 2;
+        elif (toks[pos+1][0] == T_0ID): # LDB address (label)
+          ast.append([ASTINS, "ldc:l", toks[pos+1][1], pc]);
+          pc += 4;
+          pos += 2;
         elif (toks[pos+1][0] == T_IDD): # LDC DRF ADDR16(LABEL)
           ast.append([ASTINS, "ldc:b", toks[pos+1][1], pc]);
           pc += 4;
@@ -260,6 +264,10 @@ def Parse(toks: list) -> list:
         elif (toks[pos+1][0] == T_REG): # LDD register
           ast.append([ASTINS, "ldd:r", toks[pos+1][1], pc]);
           pc += 3;
+          pos += 2;
+        elif (toks[pos+1][0] == T_0ID): # LDB address (label)
+          ast.append([ASTINS, "ldd:l", toks[pos+1][1], pc]);
+          pc += 4;
           pos += 2;
         elif (toks[pos+1][0] == T_IDD): # LDD DRF ADDR16(LABEL)
           ast.append([ASTINS, "ldd:b", toks[pos+1][1], pc]);
@@ -335,14 +343,26 @@ def Parse(toks: list) -> list:
       elif (toks[pos][1] == "sub"): # SUB
         if ((toks[pos+1][0] == T_REG) and (toks[pos+2][0] == T_INT)): # SUB %R $I
           ast.append([ASTINS, "sub:ra", [toks[pos+1][1], toks[pos+2][1]], pc]);
-          pc += 5;
+          pc += 4;
           pos += 3;
         elif ((toks[pos+1][0] == T_REG) and (toks[pos+2][0] == T_REG)): # SUB %R %R
           ast.append([ASTINS, "sub:c", [toks[pos+1][1], toks[pos+2][1]], pc]);
           pc += 3;
           pos += 3;
         else:
-          print("No. ADD");
+          print("No. SUB");
+          exit(1);
+      elif (toks[pos][1] == "div"): # SUB
+        if ((toks[pos+1][0] == T_REG) and (toks[pos+2][0] == T_INT)): # SUB %R $I
+          ast.append([ASTINS, "div:ra", [toks[pos+1][1], toks[pos+2][1]], pc]);
+          pc += 4;
+          pos += 3;
+        elif ((toks[pos+1][0] == T_REG) and (toks[pos+2][0] == T_REG)): # SUB %R %R
+          ast.append([ASTINS, "div:c", [toks[pos+1][1], toks[pos+2][1]], pc]);
+          pc += 3;
+          pos += 3;
+        else:
+          print("No. DIV");
           exit(1);
       elif (toks[pos][1] == "lodsb"): # LODSB
         ast.append([ASTINS, "lodsb:0", 0, pc]);
@@ -554,6 +574,13 @@ def CompileGC16X(prog: list, labs: dict):
         code.append(val % 256);
         code.append(val >> 8);
         pos += 1;
+      elif (prog[pos][1] == "ldc:l"): # LDC immediate (label)
+        code.append(0x66);
+        code.append(0x07);
+        val = labs[prog[pos][2]];
+        code.append(val % 256);
+        code.append(val >> 8);
+        pos += 1;
       elif (prog[pos][1] == "ldc:a"): # LDC immediate
         code.append(0x66);
         code.append(0x07);
@@ -568,6 +595,13 @@ def CompileGC16X(prog: list, labs: dict):
       elif (prog[pos][1] == "ldc:b"): # LDC absolute
         code.append(0x66);
         code.append(0x57);
+        val = labs[prog[pos][2]];
+        code.append(val % 256);
+        code.append(val >> 8);
+        pos += 1;
+      elif (prog[pos][1] == "ldd:l"): # LDC immediate (label)
+        code.append(0x66);
+        code.append(0x07);
         val = labs[prog[pos][2]];
         code.append(val % 256);
         code.append(val >> 8);
@@ -670,10 +704,27 @@ def CompileGC16X(prog: list, labs: dict):
         code.append(prog[pos][2][1] % 256);
         code.append(prog[pos][2][1] >> 8);
         pos += 1;
+      elif (prog[pos][1] == "div:c"): # DIV REG16 REG16
+        code.append(0x10);
+        code.append(0x03); # A B C D S G SP BP
+        code.append((prog[pos][2][0]*8)+(prog[pos][2][1]));
+        pos += 1;
+      elif (prog[pos][1] == "div:ra"): # DIV REG16 IMM16
+        code.append(0x10);
+        code.append(0x38+prog[pos][2][0]);
+        code.append(prog[pos][2][1] % 256);
+        code.append(prog[pos][2][1] >> 8);
+        pos += 1;
       elif (prog[pos][1] == "sub:c"): # SUB REG16 REG16
         code.append(0x10);
         code.append(0x01); # A B C D S G SP BP
         code.append((prog[pos][2][0]*8)+(prog[pos][2][1]));
+        pos += 1;
+      elif (prog[pos][1] == "sub:ra"): # SUB REG16 IMM16
+        code.append(0x10);
+        code.append(0x18+prog[pos][2][0]);
+        code.append(prog[pos][2][1] % 256);
+        code.append(prog[pos][2][1] >> 8);
         pos += 1;
       elif (prog[pos][1] == "push:r"): # PUSH register
         code.append(0x0F);

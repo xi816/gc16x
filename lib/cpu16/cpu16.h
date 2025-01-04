@@ -184,6 +184,10 @@ U8 CPUID(GC* gc) {  // 0F E9
       gc->r.D = ((gc->pin & 0b10000000) >> 7);
       break;
     }
+    case 0x0002: { // Get memory size (0 for 65,536 bytes and then looping back)
+      gc->r.D = (U16)MEMSIZE;
+      break;
+    }
     default:
       fprintf(stderr, "Illegal CPUID value: %04X\n", gc->r.D);
       return 1;
@@ -270,7 +274,7 @@ U8 SUBB0(GC* gc) {  // 10 19
 }
 
 U8 SUBC0(GC* gc) {  // 10 1A
-  gc->r.C += ReadWord(*gc, gc->r.PC+1);
+  gc->r.C -= ReadWord(*gc, gc->r.PC+1);
   gc->r.PC += 3;
   return 0;
 }
@@ -330,19 +334,25 @@ U8 MULG0(GC* gc) {  // 10 2D
 }
 
 U8 DIVA0(GC* gc) {  // 10 38
-  gc->r.A /= ReadWord(*gc, gc->r.PC+1);
+  U16 val = ReadWord(*gc, gc->r.PC+1);
+  gc->r.D = gc->r.A % val; // The remainder is always stored into D
+  gc->r.A /= val;
   gc->r.PC += 3;
   return 0;
 }
 
 U8 DIVB0(GC* gc) {  // 10 39
-  gc->r.B /= ReadWord(*gc, gc->r.PC+1);
+  U16 val = ReadWord(*gc, gc->r.PC+1);
+  gc->r.D = gc->r.B % val; // The remainder is always stored into D
+  gc->r.B /= val;
   gc->r.PC += 3;
   return 0;
 }
 
 U8 DIVC0(GC* gc) {  // 10 3A
-  gc->r.C /= ReadWord(*gc, gc->r.PC+1);
+  U16 val = ReadWord(*gc, gc->r.PC+1);
+  gc->r.D = gc->r.C % val; // The remainder is always stored into D
+  gc->r.C /= val;
   gc->r.PC += 3;
   return 0;
 }
@@ -354,13 +364,17 @@ U8 DIVD0(GC* gc) {  // 10 3B
 }
 
 U8 DIVS0(GC* gc) {  // 10 3C
-  gc->r.S /= ReadWord(*gc, gc->r.PC+1);
+  U16 val = ReadWord(*gc, gc->r.PC+1);
+  gc->r.D = gc->r.S % val; // The remainder is always stored into D
+  gc->r.S /= val;
   gc->r.PC += 3;
   return 0;
 }
 
 U8 DIVG0(GC* gc) {  // 10 3D
-  gc->r.G /= ReadWord(*gc, gc->r.PC+1);
+  U16 val = ReadWord(*gc, gc->r.PC+1);
+  gc->r.D = gc->r.G % val; // The remainder is always stored into D
+  gc->r.G /= val;
   gc->r.PC += 3;
   return 0;
 }
@@ -1154,6 +1168,7 @@ U0 RegDump(GC gc) {
 
 U8 Exec(GC gc, const U32 memsize) {
   U8 exc = 0;
+  U8 st = false;
   while (!exc) {
     exc = (INSTS[gc.mem[gc.r.PC]])(&gc);
     /*
@@ -1163,10 +1178,19 @@ U8 Exec(GC gc, const U32 memsize) {
     printf("  \033[32m%04X %04X\033[0m\n", gc.r.S, gc.r.G);
     */
     /*
-    getchar();
-    fputs("\033[H\033[2J", stdout);
-    StackDump(gc, 10);
-    RegDump(gc);
+    if (gc.r.PC == 0x04) {
+      st = true;
+    }
+    if (st) {
+      getchar();
+      fputs("\033[H\033[2J", stdout);
+      StackDump(gc, 10);
+      RegDump(gc);
+      for (U32 i = 0; i < 0x06; i++) {
+        printf("%02X ", gc.mem[0x72 + i]);
+      }
+      puts("\0");
+    }
     printf("PC: %04X\n", gc.r.PC);
     puts("\0");
     */

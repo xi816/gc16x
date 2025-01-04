@@ -16,12 +16,14 @@ jmp boot
 ; C - number of characters to output
 write:
   ldd $00
+  sub %c $01
+write-lp:
   ldg %s
   lodgb
   push %g
   int $02
   inx %s
-  loop write
+  loop write-lp
   ret
 
 ; puts - Output string until NUL ($00)
@@ -58,28 +60,29 @@ strtok:
 ; inttostr - Convert a 16-bit integer into a string
 ; Arguments:
 ; A - Number
-; inttostr:
-;   ldg inttostr-buf
-;   add %g $04
-; inttostr-lp:
-;   div %a #10 ; Divide and get the remainder into D
-;   add %d #48 ; Convert to ASCII
-;   lds %g
-;   storb %d
-;   dex %g
-;   cmp %a $00
-;   jmne inttostr-lp
-;   ret
-; inttostr-buf: bytes "^@^@^@^@^@"
+inttostr:
+  ldg inttostr-buf
+  add %g $04
+inttostr-lp:
+  div %a #10 ; Divide and get the remainder into D
+  add %d #48 ; Convert to ASCII
+  lds %g
+  storb %d
+  dex %g
+  cmp %a $00
+  jmne inttostr-lp
+  ret
+inttostr-buf: bytes "^@^@^@^@^@"
 
 ; puti - Output a 16-bit integer number
 ; Arguments:
-; puti:
-;   call inttostr
-;   lds inttostr-buf
-;   ldc $05
-;   call write
-;   ret
+; A - Number
+puti:
+  call inttostr
+  lds inttostr-buf
+  ldc $05
+  call write
+  ret
 
 ; strcmp - Check if two strings are equal
 ; Arguments:
@@ -197,6 +200,8 @@ boot-unk-cpu:
   lds kp-0-0msg
   jmp fail
 boot-shell:
+  ; Show memory usage
+  call fre
   ; Start the shell
   call com-govnos
 
@@ -292,7 +297,7 @@ com-govnos-process: ; Process the command
   cmp %a $00
   jme com-govnosEXEC-exit
 
-  ; exit
+  ; echo
   lda comm
   ldb instFULL-echo
   ldc $20 ; compare until space
@@ -405,7 +410,6 @@ com-govnosEXEC-echo:
   call puts
   push $0A
   int $02
-
   jmp com-govnos-aftexec
 
 com-govnosEXEC-exit:
@@ -414,6 +418,18 @@ com-govnosEXEC-exit:
   jmp com-govnos-term
 
 ; Shutdown and termination
+fre:
+  ldd $0000
+  ldb bootsecend
+  sub %d %b
+  add %d $02
+  lda %d
+  call puti ; Output the number
+
+  lds fre00-msg
+  call puts
+  ret
+
 com-govnos-shutdown:
   lds exit-msg
   call puts
@@ -440,6 +456,7 @@ help-msg:      bytes "GovnOS Help manual page 1/1$"
                bytes "  hlt       Halt the system (Kernel panic 6,0)$"
                bytes "  retr      Restart the shell$^@"
 exec-statusM:  bytes "Executing command ...$^@"
+fre00-msg:     bytes " bytes free$^@"
 ; GSFETCH
 gsfc-stM:      bytes     $1B "[97mgsfetch$" $1B "[0m---------$^@"
 gsfc-hostM:    bytes     $1B "[97mHost: " $1B "[0m^@"
@@ -457,9 +474,9 @@ kp-6-0msg:     bytes "Kernel panic: Triggered halt(6,0)$^@"
 kp-41-0msg:    bytes "Kernel panic: Kernel error(41,0)$^@"
 
 ; CPU types
-procchk-msg:   bytes "[0000] Checking CPU$^@"
-proc-00-msg:   bytes "[0001] CPU: Govno Core 16X$$^@"
-proc-unk-msg:  bytes "[0001] CPU: Unknown$$^@"
+procchk-msg:   bytes "Checking CPU ...$^@"
+proc-00-msg:   bytes "CPU: Govno Core 16X$$^@"
+proc-unk-msg:  bytes "CPU: Unknown$$^@"
 proc-00M:      bytes "Govno Core 16X$^@"
 proc-unkM:     bytes "Unknown :($^@"
 
@@ -499,5 +516,5 @@ comm:          bytes "^@^@^@^@^@^@^@^@^@^@^@^@^@^@^@^@"
                bytes "^@^@^@^@^@^@^@^@^@^@^@^@^@^@^@^@"
                bytes "^@^@^@^@^@^@^@^@^@^@^@^@^@^@^@^@"
 commi:         bytes "^@"
-bootsecend:    bytes $AA $55 "^@" ; End the boot sector
+bootsecend:    bytes $AA $55
 
