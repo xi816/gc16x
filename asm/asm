@@ -109,6 +109,9 @@ def Lex(prog: str):
       while (prog[pos] != "\""):
         if (prog[pos] == "$"):
           buf += "\n";
+        elif ((prog[pos] == "\\") and (prog[pos+1] == "\"")):
+          buf += "\"";
+          pos += 2;
         elif (prog[pos] == "^"):
           if (ord(prog[pos+1]) in range(64, 97)):
             buf += chr(ord(prog[pos+1])-64);
