@@ -529,13 +529,15 @@ U8 OR11(GC* gc) {  // 10 D9
 
 U8 CMP11(GC* gc) {  // 10 F6
   gcrc_t rc = ReadRegClust(gc->mem[gc->r.PC+1]);
-  gc->r.PS |= (*ReadReg(gc, rc.x) == *ReadReg(gc, rc.y)) << 2;
+  if (*ReadReg(gc, rc.x) == *ReadReg(gc, rc.y)) gc->r.PS |= 0b00000100;
+  else gc->r.PS &= 0b11111011;
   gc->r.PC += 2; // Set equal flag if two register values
   return 0;      // are equal
 }
 
 U8 CMP10(GC* gc) {  // 10 EE
-  gc->r.PS |= (*ReadReg(gc, gc->mem[gc->r.PC+1]) == ReadWord(*gc, gc->r.PC+2)) << 2;
+  if ((*ReadReg(gc, gc->mem[gc->r.PC+1]) == ReadWord(*gc, gc->r.PC+2))) gc->r.PS |= 0b00000100;
+  else gc->r.PS &= 0b11111011;
   gc->r.PC += 4; // Set equal flag if a register and
   return 0;      // immediate are equal
 }
@@ -1175,6 +1177,13 @@ U8 Exec(GC gc, const U32 memsize) {
   U8 st = false;
   while (!exc) {
     exc = (INSTS[gc.mem[gc.r.PC]])(&gc);
+    /*
+    for (U32 i = 0; i < 0x20; i++) {
+      printf("%02X ", gc.mem[0x619 + i]);
+    }
+    printf("  \033[32m%04X %04X\033[0m\n", gc.r.S, gc.r.G);
+    */
+    /*
     if (gc.r.PC == 0x8A) {
       st = true;
     }
@@ -1185,13 +1194,6 @@ U8 Exec(GC gc, const U32 memsize) {
       RegDump(gc);
       puts("\0");
     }
-    /*
-    for (U32 i = 0; i < 0x20; i++) {
-      printf("%02X ", gc.mem[0x619 + i]);
-    }
-    printf("  \033[32m%04X %04X\033[0m\n", gc.r.S, gc.r.G);
-    */
-    /*
     printf("PC: %04X\n", gc.r.PC);
     puts("\0");
     */
