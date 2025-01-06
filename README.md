@@ -13,8 +13,8 @@ CGovnOS is a virtual machine for the Govno Core 16X processor.
 
 ```asm
 main:
-  push 50h
-  int 00h
+  push #50h
+  int #00h
 ```
 
 and compile it with `kasm`: `./kasm test.asm test.bin`.
