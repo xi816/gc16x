@@ -30,7 +30,7 @@ WHI    = " \r\0\t";
 DIGEXT = "0123456789ABCDEF";
 KEY2   = [
   "lda", "ldb", "ldc", "ldd", "lds", "ldg", "push", "int", "lodsb", "lodgb", "cmp", "inx", "dex", "jme", "jmne", "ret", "jmp", "call", "nop",
-  "loop", "cop", "storb", "stgrb", "cpuid", "hlt", "pop", "add", "sub", "div", "brk"
+  "loop", "cop", "storb", "stgrb", "cpuid", "hlt", "pop", "add", "sub", "div", "brk", "ldds"
 ];
 KEYR   = ["a", "b", "c", "d", "s", "g", "sp", "bp"];
 regids = ["a", "b", "c", "d", "s", "g"];
@@ -367,6 +367,10 @@ def Parse(toks: list) -> list:
         else:
           print("No. DIV");
           exit(1);
+      elif (toks[pos][1] == "ldds"): # LDDS
+        ast.append([ASTINS, "ldds:0", 0, pc]);
+        pc += 2;
+        pos += 1;
       elif (toks[pos][1] == "lodsb"): # LODSB
         ast.append([ASTINS, "lodsb:0", 0, pc]);
         pc += 2;
@@ -545,7 +549,7 @@ def CompileGC16X(prog: list, labs: dict):
         code.append(val % 256);
         code.append(val >> 8);
         pos += 1;
-      elif (prog[pos][1] == "lds:a"): # LDA absolute
+      elif (prog[pos][1] == "lda:b"): # LDA absolute
         code.append(0x66);
         code.append(0x55);
         val = labs[prog[pos][2]];
@@ -636,7 +640,7 @@ def CompileGC16X(prog: list, labs: dict):
       elif (prog[pos][1] == "lds:l"): # LDS immediate (label)
         code.append(0x66);
         code.append(0x09);
-        print(prog[pos]);
+        print(prog[pos], prog[pos][2]);
         val = labs[prog[pos][2]];
         code.append(val % 256);
         code.append(val >> 8);
@@ -741,6 +745,10 @@ def CompileGC16X(prog: list, labs: dict):
       elif (prog[pos][1] == "lodgb:0"): # LODGB
         code.append(0x10);
         code.append(0x89);
+        pos += 1;
+      elif (prog[pos][1] == "ldds:0"): # LDDS
+        code.append(0x10);
+        code.append(0x8B);
         pos += 1;
       elif (prog[pos][1] == "ret:0"): # RET
         code.append(0x33);

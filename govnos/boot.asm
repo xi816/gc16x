@@ -167,6 +167,50 @@ memcpy:
   loop memcpy
   ret
 
+; gfs-read-signature - Read the signature of the
+; drive (GovnFS filesystem)
+; Returns:
+; A: magic byte
+; B: drive letter
+; D: disk size
+; gfs-sign-sernum: serial number
+gfs-read-signature:
+  lds $0000 ; magic byte address (disk)
+  ldds
+  ldc %a
+  lds $0011 ; drive letter address (disk)
+  ldds
+  ldb %a
+  lds $0010 ; disk size (in sectors) address (disk)
+  ldds
+  ldd %a
+
+  lds $000C
+  ldds
+  lds gfs-sign-sernum
+  storb %a
+
+  lds $000D
+  ldds
+  lds gfs-sign-sernum
+  inx %s
+  storb %a
+
+  lds $000E
+  ldds
+  lds gfs-sign-sernum
+  add %s $02
+  storb %a
+
+  lds $000F
+  ldds
+  lds gfs-sign-sernum
+  add %s $03
+  storb %a
+
+  lda %c
+gfs-sign-sernum: bytes "^@^@^@^@"
+
 ; gfs-read-file - Read the file in the drive (GovnFS filesystem) and
 ; copy the file contents into an address
 ; D - directory
@@ -312,6 +356,13 @@ com-govnos-process: ; Process the command
   cmp %a $00
   jme com-govnos
 
+  ; info
+  lda comm
+  ldb instFULL-info
+  call strcmp
+  cmp %a $00
+  jme com-govnosEXEC-info
+
   ; drive
   lda comm
   ldb instFULL-drve
@@ -334,10 +385,18 @@ com-govnos-aftexec:
 
 ; Commands
 com-govnosEXEC-dir:
+  call gfs-read-signature
+  lds dir00-msg
+  call puts
+  push %b
+  int $02
+  push $0A
+  int $02
+
   lds dir-00msg
   call puts
-  lds kp-1-1msg
-  call fail
+  ; lds kp-1-1msg
+  ; call fail
   jmp com-govnos-aftexec ; Go to a new task after execution
 
 com-govnosEXEC-cls:
@@ -412,6 +471,11 @@ com-govnosEXEC-echo:
   int $02
   jmp com-govnos-aftexec
 
+com-govnosEXEC-info:
+  lds OS-RELEASE
+  call puts
+  jmp com-govnos-aftexec
+
 com-govnosEXEC-exit:
   lds exit-term-msg
   call puts
@@ -454,9 +518,11 @@ help-msg:      bytes "GovnOS Help manual page 1/1$"
                bytes "  gsfetch   Show system info$"
                bytes "  help      Show help$"
                bytes "  hlt       Halt the system (Kernel panic 6,0)$"
+               bytes "  info      Show OS release info$"
                bytes "  retr      Restart the shell$^@"
 exec-statusM:  bytes "Executing command ...$^@"
 fre00-msg:     bytes " bytes free$^@"
+dir00-msg:     bytes "Drive "
 ; GSFETCH
 gsfc-stM:      bytes     $1B "[97mgsfetch$" $1B "[0m---------$^@"
 gsfc-hostM:    bytes     $1B "[97mHost: " $1B "[0m^@"
@@ -491,6 +557,12 @@ env-PCNAME:    bytes "GovnPC Ultra^@^@^@^@"
 ; Constant environment variables
 envc-OSNAME:   bytes "GovnOS 0.0.1^@^@^@^@"
 
+; Info
+OS-RELEASE:    bytes $1B "[36mGovnOS version 0.0.1 (alpha)$"
+               bytes "Date of creation: 01/06/2025$"
+               bytes "$(c) Xi816, 2025"
+               bytes $1B "[0m$^@"
+
 ; Data
 dynptr:        bytes $00
 
@@ -504,10 +576,12 @@ instFULL-cls:  bytes "cls^@"
 instFULL-help: bytes "help^@"
 instFULL-hlt:  bytes "hlt^@"
 instFULL-exit: bytes "exit^@"
-instFULL-echo: bytes "echo "
 instFULL-retr: bytes "retr^@"
+instFULL-info: bytes "info^@"
 instFULL-drve: bytes "drive^@"
 instFULL-gsfc: bytes "gsfetch^@"
+
+instFULL-echo: bytes "echo "
 bad-inst-msg:  bytes "Bad command.$^@"
 
 ; Buffers

@@ -11,9 +11,6 @@ struct gcregs {
   gcword D;   // Data
   gcword S;   // Segment (address)
   gcword G;   // Segment #2 (address)
-  // gcbyte STI; // Interrupt flag
-  // gcbyte SEI; // Equal flag
-  // gcbyte SCI; // Carry flag
   gcbyte PS;  // -I---E-C
   gcword SP;  // Stack pointer
   gcword BP;  // Base pointer
@@ -418,7 +415,7 @@ U8 STOGB(GC* gc) {  // 10 8A
 }
 
 U8 LDDS(GC* gc) {  // 10 8B
-  gc->r.S = gc->rom[*gc, gc->r.S];
+  gc->r.A = gc->rom[*gc, gc->r.S];
   gc->r.PC += 2;
   return 0;
 }
@@ -1015,6 +1012,17 @@ U8 NOP(GC* gc) { // EA
   return 0;
 }
 
+U8 LFA(GC* gc) { // F9
+  gc->r.A &= 0b1111111100000000;
+  gc->r.A |= gc->r.PS;
+  return 0;
+}
+
+U8 LAF(GC* gc) { // FA
+  gc->r.PS = (U8)gc->r.A;
+  return 0;
+}
+
 U8 PG0F(GC*); // Page 0F - Stack operations
 U8 PG10(GC*); // Page 10 - Register operations
 U8 PG66(GC*); // Page 66 - Load/Store operations
@@ -1035,9 +1043,9 @@ U8 (*INSTS[256])() = {
   &ASL  , &ASL  , &ASL  , &ASL  , &ASL  , &ASL  , &ASL  , &ASL  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &INXM , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &LOOP , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &CALL , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
-  &ASL  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &COP1 , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &COP1 , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &ASR  , &ASR  , &ASR  , &ASR  , &ASR  , &ASR  , &ASR  , &ASR  , &UNK  , &UNK  , &NOP  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
-  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK
+  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &LFA  , &LAF  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK
 };
 
 U8 (*INSTS_PG0F[256])() = {
