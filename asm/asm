@@ -18,19 +18,20 @@ T_EOF   = 0x0B;
 
 ASTINS   = 0x00;
 ASTBYTES = 0x01;
-ASTBRKH  = 0x02;
-ASTEOF   = 0x03;
+ASTRES   = 0x02;
+ASTBRKH  = 0x03;
+ASTEOF   = 0x04;
 
 HUMAN_TOKS = ["INST", "INT", "LABEL", "REG", "NAME", "ADDRESS", "BYTES", "STRING", "DRF-NAME", "MCR", "EOL", "EOF"];
-HUMAN_AST  = ["INST", "BYTES", "BRK-HANDLER", "EOF"];
+HUMAN_AST  = ["INST", "BYTES", "RESERVE", "BRK-HANDLER", "EOF"];
 
 LET    = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 DIG    = "0123456789";
 WHI    = " \r\0\t";
 DIGEXT = "0123456789ABCDEF";
 KEY2   = [
-  "lda", "ldb", "ldc", "ldd", "lds", "ldg", "push", "int", "lodsb", "lodgb", "cmp", "inx", "dex", "jme", "jmne", "ret", "jmp", "call", "nop",
-  "loop", "cop", "storb", "stgrb", "cpuid", "hlt", "pop", "add", "sub", "div", "brk", "ldds"
+  "lda", "ldb", "ldc", "ldd", "lds", "ldg", "push", "int", "lodsb", "lodgb", "cmp", "inx", "dex", "jme", "jmne", "ret", "jmp",
+  "call", "nop", "loop", "cop", "storb", "stgrb", "cpuid", "hlt", "pop", "add", "sub", "div", "brk", "ldds", "re", "rne", "mul"
 ];
 KEYR   = ["a", "b", "c", "d", "s", "g", "sp", "bp"];
 regids = ["a", "b", "c", "d", "s", "g"];
@@ -124,7 +125,28 @@ def Lex(prog: str):
       pos += 1;
       toks.append((T_STR, buf));
       buf = "";
-      # cpos += 1+bytesmode;
+    elif (prog[pos] == "'"):
+      pos += 1;
+      if (prog[pos] == "$"):
+        buf = 10;
+      elif ((prog[pos] == "\\") and (prog[pos+1] == "\"")):
+        buf = 34;
+        pos += 2;
+      elif (prog[pos] == "^"):
+        if (ord(prog[pos+1]) in range(64, 97)):
+          buf = ord(prog[pos+1])-64;
+        elif (prog[pos+1] in "^$"):
+          buf = ord(prog[pos+1]);
+        pos += 1;
+      else:
+        buf = ord(prog[pos]);
+      pos += 1;
+      if (prog[pos] != "'"):
+        print("\033[31mError\033[0m: unterminated character literal");
+        print("\033[96mHint\033[0m: the syntax is '([a-zA-Z$])|(\\^[@-`$])'");
+        exit(1);
+      pos += 1;
+      toks.append((T_INT, buf));
     elif (prog[pos] == "^"):
       pos += 1;
       while (prog[pos] in DIGEXT):
@@ -170,6 +192,8 @@ def Lex(prog: str):
           toks.append((T_INS, buf));
         elif (buf == "bytes"):
           toks.append((T_BYTE, 0));
+        elif (buf == "reserve"):
+          toks.append((T_MCR, "reserve"));
         else:
           toks.append((T_0ID, buf));
       buf = "";
@@ -248,7 +272,7 @@ def Parse(toks: list) -> list:
           ast.append([ASTINS, "ldc:r", toks[pos+1][1], pc]);
           pc += 3;
           pos += 2;
-        elif (toks[pos+1][0] == T_0ID): # LDB address (label)
+        elif (toks[pos+1][0] == T_0ID): # LDC address (label)
           ast.append([ASTINS, "ldc:l", toks[pos+1][1], pc]);
           pc += 4;
           pos += 2;
@@ -268,7 +292,7 @@ def Parse(toks: list) -> list:
           ast.append([ASTINS, "ldd:r", toks[pos+1][1], pc]);
           pc += 3;
           pos += 2;
-        elif (toks[pos+1][0] == T_0ID): # LDB address (label)
+        elif (toks[pos+1][0] == T_0ID): # LDD address (label)
           ast.append([ASTINS, "ldd:l", toks[pos+1][1], pc]);
           pc += 4;
           pos += 2;
@@ -350,6 +374,18 @@ def Parse(toks: list) -> list:
           pos += 3;
         elif ((toks[pos+1][0] == T_REG) and (toks[pos+2][0] == T_REG)): # SUB %R %R
           ast.append([ASTINS, "sub:c", [toks[pos+1][1], toks[pos+2][1]], pc]);
+          pc += 3;
+          pos += 3;
+        else:
+          print("No. SUB");
+          exit(1);
+      elif (toks[pos][1] == "mul"): # MUL
+        if ((toks[pos+1][0] == T_REG) and (toks[pos+2][0] == T_INT)): # MUL %R $I
+          ast.append([ASTINS, "mul:ra", [toks[pos+1][1], toks[pos+2][1]], pc]);
+          pc += 4;
+          pos += 3;
+        elif ((toks[pos+1][0] == T_REG) and (toks[pos+2][0] == T_REG)): # MUL %R %R
+          ast.append([ASTINS, "mul:c", [toks[pos+1][1], toks[pos+2][1]], pc]);
           pc += 3;
           pos += 3;
         else:
@@ -475,9 +511,21 @@ def Parse(toks: list) -> list:
         ast.append([ASTINS, "hlt:0", 0, pc]);
         pc += 1;
         pos += 1;
+      elif (toks[pos][1] == "re"): # RE
+        ast.append([ASTINS, "re:0", 0, pc]);
+        pc += 1;
+        pos += 1;
+      elif (toks[pos][1] == "rne"): # RNE
+        ast.append([ASTINS, "rne:0", 0, pc]);
+        pc += 1;
+        pos += 1;
       elif (toks[pos][1] == "pop"): # POP
         ast.append([ASTINS, "pop:r", toks[pos+1][1], pc]);
         pc += 3;
+        pos += 2;
+      elif (toks[pos][1] == "cop"): # COP
+        ast.append([ASTINS, "cop:r", toks[pos+1][1], pc]);
+        pc += 2;
         pos += 2;
       elif (toks[pos][1] == "cpuid"): # CPUID
         ast.append([ASTINS, "cpuid:0", 0, pc]);
@@ -516,6 +564,21 @@ def Parse(toks: list) -> list:
           print("Your raw bytes are cooked bro.");
           exit(1);
         pos += 1;
+    elif (toks[pos][0] == T_MCR): # Parse macros
+      if (toks[pos][1] == "reserve"):
+        if (toks[pos+1][0] != T_INT):
+          print(f"\033[31mError\033[0m: expected number after reserve.");
+          print(f"\033[96mHint\033[0m: syntax for `reserve` is: reserve #10 bytes");
+          exit(1);
+        if (toks[pos+2][0] == T_BYTE):
+          restype = 1; # bytes
+        else:
+          print(f"\033[31mError\033[0m: expected bytes after reserve #n.");
+          print(f"\033[96mHint\033[0m: syntax for `reserve` is: reserve #10 bytes");
+          exit(1);
+        ast.append([ASTRES, "__B_reserve", toks[pos+1][1]*restype, pc]);
+        pc += toks[pos+1][1]*restype;
+        pos += 3;
     elif (toks[pos][0] == T_EOL): # Parse EOL
       pos += 1;
     else:
@@ -640,7 +703,6 @@ def CompileGC16X(prog: list, labs: dict):
       elif (prog[pos][1] == "lds:l"): # LDS immediate (label)
         code.append(0x66);
         code.append(0x09);
-        print(prog[pos], prog[pos][2]);
         val = labs[prog[pos][2]];
         code.append(val % 256);
         code.append(val >> 8);
@@ -708,6 +770,17 @@ def CompileGC16X(prog: list, labs: dict):
       elif (prog[pos][1] == "add:ra"): # ADD REG16 IMM16
         code.append(0x10);
         code.append(0x08+prog[pos][2][0]);
+        code.append(prog[pos][2][1] % 256);
+        code.append(prog[pos][2][1] >> 8);
+        pos += 1;
+      elif (prog[pos][1] == "mul:c"): # MUL REG16 REG16
+        code.append(0x10);
+        code.append(0x02); # A B C D S G SP BP
+        code.append((prog[pos][2][0]*8)+(prog[pos][2][1]));
+        pos += 1;
+      elif (prog[pos][1] == "mul:ra"): # MUL REG16 IMM16
+        code.append(0x10);
+        code.append(0x28+prog[pos][2][0]);
         code.append(prog[pos][2][1] % 256);
         code.append(prog[pos][2][1] >> 8);
         pos += 1;
@@ -824,9 +897,19 @@ def CompileGC16X(prog: list, labs: dict):
       elif (prog[pos][1] == "hlt:0"): # HLT
         code.append(0x51);
         pos += 1;
+      elif (prog[pos][1] == "re:0"): # RE
+        code.append(0x2B);
+        pos += 1;
+      elif (prog[pos][1] == "rne:0"): # RNE
+        code.append(0x3B);
+        pos += 1;
       elif (prog[pos][1] == "pop:r"): # POP
         code.append(0x0F);
         code.append(0x80);
+        code.append(prog[pos][2] % 256);
+        pos += 1;
+      elif (prog[pos][1] == "cop:r"): # COP
+        code.append(0xD7);
         code.append(prog[pos][2] % 256);
         pos += 1;
       elif (prog[pos][1] == "storb:r"): # STORB
@@ -844,6 +927,9 @@ def CompileGC16X(prog: list, labs: dict):
         exit(1);
     elif (prog[pos][0] == ASTBYTES):
       code.extend(prog[pos][2]);
+      pos += 1;
+    elif (prog[pos][0] == ASTRES):
+      code.extend(bytes(prog[pos][2]));
       pos += 1;
     else:
       print(f"\033[31mUnknown\033[0m token {prog[pos]}");

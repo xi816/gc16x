@@ -16,5 +16,6 @@ build_state "CGovnOS"     "./"
 build_state "gasman"      "core/gasman/"
 build_state "gboot"       "core/gboot/"
 build_state "ugovnfs"     "core/ugovnfs/"
+# build_state "kasm"        "asm/"
 completed_state
 

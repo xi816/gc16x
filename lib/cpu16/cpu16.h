@@ -416,25 +416,25 @@ U8 STOGB(GC* gc) {  // 10 8A
 
 U8 LDDS(GC* gc) {  // 10 8B
   gc->r.A = gc->rom[*gc, gc->r.S];
-  gc->r.PC += 2;
+  gc->r.PC++;
   return 0;
 }
 
 U8 LDDG(GC* gc) {  // 10 9B
   gc->r.G = gc->rom[*gc, gc->r.G];
-  gc->r.PC += 2;
+  gc->r.PC++;
   return 0;
 }
 
 U8 STDS(GC* gc) {  // 10 AB
   gc->rom[gc->r.S] = *ReadReg(gc, gc->r.PC+1);
-  gc->r.PC += 2;
+  gc->r.PC++;
   return 0;
 }
 
 U8 STDG(GC* gc) {  // 10 BB
   gc->rom[gc->r.G] = *ReadReg(gc, gc->r.PC+1);
-  gc->r.PC += 2;
+  gc->r.PC++;
   return 0;
 }
 

@@ -72,7 +72,7 @@ inttostr-lp:
   cmp %a $00
   jmne inttostr-lp
   ret
-inttostr-buf: bytes "^@^@^@^@^@"
+inttostr-buf: reserve #5 bytes
 
 ; puti - Output a 16-bit integer number
 ; Arguments:
@@ -166,6 +166,27 @@ memcpy:
   inx %b
   loop memcpy
   ret
+
+; scani - Scan an integer from standard input
+; Returns:
+; A - number
+scani:
+  lda $00
+scani-lp:
+  int $01
+  pop %b
+  cmp %b $0A ; Check for Enter
+  re
+  cmp %b $20 ; Check for space
+  re
+  cmp %b $00 ; Check for NUL ($00)
+  re
+  mul %a #10
+  push %b
+  int $02
+  sub %b #48
+  add %a %b
+  jmp scani-lp
 
 ; gfs-read-signature - Read the signature of the
 ; drive (GovnFS filesystem)
@@ -558,17 +579,17 @@ env-PCNAME:    bytes "GovnPC Ultra^@^@^@^@"
 envc-OSNAME:   bytes "GovnOS 0.0.1^@^@^@^@"
 
 ; Info
-OS-RELEASE:    bytes $1B "[36mGovnOS version 0.0.1 (alpha)$"
+OS-RELEASE:    bytes "^[[96mGovnOS version 0.0.1 (alpha)$"
                bytes "Date of creation: 01/06/2025$"
                bytes "$(c) Xi816, 2025"
-               bytes $1B "[0m$^@"
+               bytes "^[[0m$^@"
 
 ; Data
-dynptr:        bytes $00
+dynptr:        reserve #1 bytes
 
 ; Control sequences
-bs-seq:        bytes $08 $20 $08 "^@"
-cls-seq:       bytes $1B $5B $48 $1B $5B $32 $4A "^@"
+bs-seq:        bytes "^H ^H^@"
+cls-seq:       bytes "^[[H^[[2J^@"
 
 ; Commands
 instFULL-dir:  bytes "dir^@"
@@ -585,10 +606,13 @@ instFULL-echo: bytes "echo "
 bad-inst-msg:  bytes "Bad command.$^@"
 
 ; Buffers
-comm:          bytes "^@^@^@^@^@^@^@^@^@^@^@^@^@^@^@^@"
-               bytes "^@^@^@^@^@^@^@^@^@^@^@^@^@^@^@^@"
-               bytes "^@^@^@^@^@^@^@^@^@^@^@^@^@^@^@^@"
-               bytes "^@^@^@^@^@^@^@^@^@^@^@^@^@^@^@^@"
-commi:         bytes "^@"
+comm:          reserve #64 bytes
+commi:         reserve #1 bytes
+
+; comm:          bytes "^@^@^@^@^@^@^@^@^@^@^@^@^@^@^@^@"
+;                bytes "^@^@^@^@^@^@^@^@^@^@^@^@^@^@^@^@"
+;                bytes "^@^@^@^@^@^@^@^@^@^@^@^@^@^@^@^@"
+;                bytes "^@^@^@^@^@^@^@^@^@^@^@^@^@^@^@^@"
+; commi:         bytes "^@"
 bootsecend:    bytes $AA $55
 
