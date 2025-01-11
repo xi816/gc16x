@@ -26,6 +26,7 @@ HUMAN_TOKS = ["INST", "INT", "LABEL", "REG", "NAME", "ADDRESS", "BYTES", "STRING
 HUMAN_AST  = ["INST", "BYTES", "RESERVE", "BRK-HANDLER", "EOF"];
 
 LET    = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
+LETEXT = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxy0123456789z-_";
 DIG    = "0123456789";
 WHI    = " \r\0\t";
 DIGEXT = "0123456789ABCDEF";
@@ -147,6 +148,7 @@ def Lex(prog: str):
         exit(1);
       pos += 1;
       toks.append((T_INT, buf));
+      buf = "";
     elif (prog[pos] == "^"):
       pos += 1;
       while (prog[pos] in DIGEXT):
@@ -168,20 +170,20 @@ def Lex(prog: str):
       # bytesmode = 1;
     elif (prog[pos] == "*"):
       pos += 1;
-      while (prog[pos] in LET+DIG+"-"):
+      while (prog[pos] in LETEXT):
         buf += prog[pos];
         pos += 1;
       toks.append((T_IDD, buf));
       buf = "";
     elif (prog[pos] == "~"):
       pos += 1;
-      while (prog[pos] in LET+DIG+"-"):
+      while (prog[pos] in LETEXT):
         buf += prog[pos];
         pos += 1;
       toks.append((T_MCR, buf));
       buf = "";
     elif (prog[pos] in LET):
-      while (prog[pos] in LET+DIG+"-"):
+      while (prog[pos] in LETEXT):
         buf += prog[pos];
         pos += 1;
       if (prog[pos] == ":"):

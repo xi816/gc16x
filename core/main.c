@@ -67,6 +67,7 @@ U8 main(I32 argc, I8** argv) {
   U32 flsize = ftell(fl);
   fseek(fl, 0, SEEK_SET);
 
+  // CPU
   GC gc;
   fread(gc.mem, 1, flsize, fl);
   fread(gc.rom, 1, dflsize, dfl);
@@ -77,14 +78,19 @@ U8 main(I32 argc, I8** argv) {
     fclose(dfl);
   }
   fclose(fl);
-
   Reset(&gc, driveboot);
-  U8 ExecExit = Exec(gc, MEMSIZE);
+  // GPU
+  gravno_start;
+  gc.renderer = renderer;
+  GGinit(&(gc.gg), renderer);
+
+  U8 ExecExit = Exec(gc, MEMSIZE, renderer);
   if (ExecExit) {
     old_st;
     return ExecExit;
   }
 
+  gravno_end;
   old_st;
   return 0;
 }

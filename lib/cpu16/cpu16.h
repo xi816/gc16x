@@ -1,6 +1,7 @@
 // CPU identificator: GC16X
 #include <cpu16/proc/std.h>
 #include <cpu16/proc/interrupts.h>
+#include <cpu16/gpu.h>
 #define ROMSIZE 65536 // Maximum for a 16-bit cpu
 #define MEMSIZE 65536 // Maximum for a 16-bit cpu
 
@@ -28,6 +29,8 @@ struct GC16X {
   gcbyte mem[MEMSIZE];
   gcbyte rom[ROMSIZE];
   gcbyte pin;
+  gc_gg16 gg;
+  SDL_Renderer* renderer;
 };
 typedef struct GC16X GC;
 
@@ -66,8 +69,6 @@ gcword StackPop(GC* gc) {
   return ReadWord(*gc, gc->r.SP-1);
 }
 
-// Register clusters can only be used for reading data,
-// writing is not allowed.
 gcrc_t ReadRegClust(U8 clust) { // Read a register cluster
   gcrc_t rc = {clust/8, clust%8};
   return rc;
@@ -155,6 +156,14 @@ U8 INT(GC* gc, bool ri) {
     case INT_WRITE: {
       putchar(StackPop(gc));
       fflush(stdout);
+      break;
+    }
+    case INT_VIDEO_WRITE: {
+      GGtype(&(gc->gg), gc->renderer, gc->r.S, (U8)gc->r.A);
+      break;
+    }
+    case INT_VIDEO_FLUSH: {
+      GGpage(&(gc->gg), gc->renderer);
       break;
     }
     default:
@@ -959,6 +968,15 @@ U8 BLCl(GC* gc) {   // 83 08 - 83 0F
   return 0;
 }
 
+U8 XCHG4(GC* gc) {  // 88
+  gcrc_t rc = ReadRegClust(gc->mem[gc->r.PC+1]);
+  U16 temp = rc.x;
+  *ReadReg(gc, rc.x) = rc.y;
+  *ReadReg(gc, rc.y) = temp;
+  gc->r.PC += 2;
+  return 0;
+}
+
 U8 DEXM(GC* gc) {   // 90
   gc->mem[ReadWord(*gc, gc->r.PC+1)]--;
   gc->r.PC += 3;
@@ -1038,7 +1056,7 @@ U8 (*INSTS[256])() = {
   &UNK  , &HLT  , &CLI  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &PG66 , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
-  &UNK  , &UNK  , &UNK  , &PG83 , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &UNK  , &UNK  , &UNK  , &PG83 , &UNK  , &UNK  , &UNK  , &UNK  , &XCHG4, &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &DEXM , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &ASL  , &ASL  , &ASL  , &ASL  , &ASL  , &ASL  , &ASL  , &ASL  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &INXM , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &LOOP , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
@@ -1180,7 +1198,7 @@ U0 RegDump(GC gc) {
   printf("\033[13;20H\033[44m   -I---E-C\033[0m\n", gc.r.PS);
 }
 
-U8 Exec(GC gc, const U32 memsize) {
+U8 Exec(GC gc, const U32 memsize, SDL_Renderer* renderer) {
   U8 exc = 0;
   U8 st = false;
   while (!exc) {

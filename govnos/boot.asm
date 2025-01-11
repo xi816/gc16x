@@ -230,7 +230,8 @@ gfs-read-signature:
   storb %a
 
   lda %c
-gfs-sign-sernum: bytes "^@^@^@^@"
+  ret
+gfs-sign-sernum: reserve #4 bytes
 
 ; gfs-read-file - Read the file in the drive (GovnFS filesystem) and
 ; copy the file contents into an address
@@ -341,6 +342,13 @@ com-govnos-process: ; Process the command
   cmp %a $00
   jme com-govnosEXEC-cls
 
+  ; color
+  lda comm
+  ldb instFULL-colr
+  call strcmp
+  cmp %a $00
+  jme com-govnosEXEC-color
+
   ; help
   lda comm
   ldb instFULL-help
@@ -411,8 +419,8 @@ com-govnosEXEC-dir:
   call puts
   push %b
   int $02
-  push $0A
-  int $02
+  lds dir01-msg
+  call puts
 
   lds dir-00msg
   call puts
@@ -423,6 +431,20 @@ com-govnosEXEC-dir:
 com-govnosEXEC-cls:
   lds cls-seq
   call puts
+  jmp com-govnos-aftexec
+
+com-govnosEXEC-color:
+  lds color00-msg
+  call puts
+  call scani
+
+  push '^['          int $02
+  push '['           int $02
+  push '3'           int $02
+  push %a add %a #48 int $02
+  push 'm'           int $02
+  push '$'           int $02
+
   jmp com-govnos-aftexec
 
 com-govnosEXEC-help:
@@ -469,14 +491,17 @@ com-govnosEXEC-gsfetch:
   cpuid
   cmp %d $00
   jme com-govnosEXEC-gsfetch-gc16x
-
   lds proc-unkM
   call puts
   jmp com-govnosEXEC-gsfetch-end
+
 com-govnosEXEC-gsfetch-gc16x:
   lds proc-00M
   call puts
 com-govnosEXEC-gsfetch-end:
+  lds gsfc-backM ; Logo
+  call puts
+
   push $0A
   int $02
   jmp com-govnos-aftexec
@@ -529,7 +554,7 @@ exit-msg:      bytes "$Shutting down ...$^@"
 exit-term-msg: bytes "exit$^@"
 welcome-msg:   bytes "Welcome to GovnOS!$To get help, type `help`$$^@"
 bschk:         bytes "Backspace$^@"
-dir-00msg:     bytes "dir is not implemented$^@"
+dir-00msg:     bytes "^[[91mdir is not fully implemented^[[0m$^@"
 help-msg:      bytes "GovnOS Help manual page 1/1$"
                bytes "  cls       Clear the screen$"
                bytes "  dir       List directories$"
@@ -543,12 +568,19 @@ help-msg:      bytes "GovnOS Help manual page 1/1$"
                bytes "  retr      Restart the shell$^@"
 exec-statusM:  bytes "Executing command ...$^@"
 fre00-msg:     bytes " bytes free$^@"
-dir00-msg:     bytes "Drive "
+dir00-msg:     bytes "Drive ^@"
+dir01-msg:     bytes "$Contents of the drive:$  no shit make the driver first$^@"
+color00-msg:   bytes "Enter the color number (0-15): ^@"
 ; GSFETCH
-gsfc-stM:      bytes     $1B "[97mgsfetch$" $1B "[0m---------$^@"
-gsfc-hostM:    bytes     $1B "[97mHost: " $1B "[0m^@"
-gsfc-osM:      bytes $0A $1B "[97mOS: " $1B "[0m^@"
-gsfc-cpuM:     bytes $0A $1B "[97mCPU: " $1B "[0m^@"
+gsfc-stM:      bytes "            ^[[97mgsfetch$^[[0m            ---------$^@"
+gsfc-hostM:    bytes "            ^[[97mHost: ^[[0m^@"
+gsfc-osM:      bytes "$            ^[[97mOS: ^[[0m^@"
+gsfc-cpuM:     bytes "$            ^[[97mCPU: ^[[0m^@"
+gsfc-backM:    bytes "^[[5A^[[33m .     . .$"
+               bytes            "    A     .$"
+               bytes            "   (=) .$"
+               bytes            " (=====)$"
+               bytes            "(========)^[[0m$^@"
 
 ; Kernel panic
 ; 0 - Processor error
@@ -585,6 +617,7 @@ OS-RELEASE:    bytes "^[[96mGovnOS version 0.0.1 (alpha)$"
                bytes "^[[0m$^@"
 
 ; Data
+errno:         reserve #1 bytes
 dynptr:        reserve #1 bytes
 
 ; Control sequences
@@ -594,6 +627,7 @@ cls-seq:       bytes "^[[H^[[2J^@"
 ; Commands
 instFULL-dir:  bytes "dir^@"
 instFULL-cls:  bytes "cls^@"
+instFULL-colr: bytes "color^@"
 instFULL-help: bytes "help^@"
 instFULL-hlt:  bytes "hlt^@"
 instFULL-exit: bytes "exit^@"
@@ -608,11 +642,5 @@ bad-inst-msg:  bytes "Bad command.$^@"
 ; Buffers
 comm:          reserve #64 bytes
 commi:         reserve #1 bytes
-
-; comm:          bytes "^@^@^@^@^@^@^@^@^@^@^@^@^@^@^@^@"
-;                bytes "^@^@^@^@^@^@^@^@^@^@^@^@^@^@^@^@"
-;                bytes "^@^@^@^@^@^@^@^@^@^@^@^@^@^@^@^@"
-;                bytes "^@^@^@^@^@^@^@^@^@^@^@^@^@^@^@^@"
-; commi:         bytes "^@"
 bootsecend:    bytes $AA $55
 
