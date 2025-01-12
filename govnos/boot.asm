@@ -520,6 +520,9 @@ com-govnosEXEC-gsfetch-end:
   lda %d
   div %a #1024
   inx %a ; maybe
+  ldb #64
+  sub %b %a
+  lda %b
   call puti
 
   lds gsfc-memN
