@@ -202,20 +202,25 @@ scani-lp:
 ; gfs-read-signature - Read the signature of the
 ; drive (GovnFS filesystem)
 ; Returns:
-; A: magic byte
-; B: drive letter
-; D: disk size
+; magic-byte: magic byte
+; drive-letter: drive letter
+; disk-size: disk size
 ; gfs-sign-sernum: serial number
 gfs-read-signature:
   lds $0000 ; magic byte address (disk)
   ldds
-  ldc %a
+  lds magic-byte
+  storb %a
+
   lds $0011 ; drive letter address (disk)
   ldds
-  ldb %a
+  lds drive-letter
+  storb %a
+
   lds $0010 ; disk size (in sectors) address (disk)
   ldds
-  ldd %a
+  lds disk-size
+  storb %a
 
   lds $000C
   ldds
@@ -243,6 +248,9 @@ gfs-read-signature:
   lda %c
   ret
 gfs-sign-sernum: reserve #4 bytes
+magic-byte:      reserve #1 bytes
+disk-size:       reserve #1 bytes
+drive-letter:    reserve #1 bytes
 
 ; gfs-read-file - Read the file in the drive (GovnFS filesystem) and
 ; copy the file contents into an address
@@ -290,6 +298,16 @@ fail:
 com-govnos:
   lds welcome-msg
   call puts
+
+  ; Read the disk signature
+  call gfs-read-signature
+
+  ; Change the PS1 (shell prompt) to show
+  ; the actual current drive
+  lds env-PS
+  ldb *drive-letter
+  storb %b
+
   jmp com-govnos-prompt
 com-govnos-prompt: ; Print the prompt
   lds env-PS
@@ -428,6 +446,7 @@ com-govnosEXEC-dir:
   call gfs-read-signature
   lds dir00-msg
   call puts
+  ldb *drive-letter
   push %b
   int $02
   lds dir01-msg
@@ -449,12 +468,12 @@ com-govnosEXEC-color:
   call puts
   call scani
 
-  push '^['          int $02
-  push '['           int $02
-  push '3'           int $02
+  push '^[' int $02
+  push '['  int $02
+  push '3'  int $02
   call puti
-  push 'm'           int $02
-  push '$'           int $02
+  push 'm'  int $02
+  push '$'  int $02
 
   jmp com-govnos-aftexec
 
@@ -474,8 +493,14 @@ com-govnosEXEC-drive:
   cmp %d $00
   jme com-govnosEXEC-driveDSC
 com-govnosEXEC-driveCNN:
-  lds drvCNN-msg
+  lds drvCNN-msg00
   call puts
+  lds *drive-letter
+  push %s
+  int $02
+  lds drvCNN-msg01
+  call puts
+
   jmp com-govnos-aftexec
 com-govnosEXEC-driveDSC:
   lds drvDSC-msg
@@ -643,7 +668,8 @@ proc-unk-msg:  bytes "CPU: Unknown$$^@"
 proc-00M:      bytes "Govno Core 16X$^@"
 proc-unkM:     bytes "Unknown :($^@"
 
-drvCNN-msg:    bytes "Disk connected as A/$^@"
+drvCNN-msg00:  bytes "Disk connected as ^@"
+drvCNN-msg01:  bytes "/$^@"
 drvDSC-msg:    bytes "Disk disconnected, A/ is an empty byte stream.$"
                bytes "Loading without a disk can have serious issues for commands that use GovnFS filesystem$^@"
 
