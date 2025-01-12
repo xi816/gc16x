@@ -74,6 +74,16 @@ inttostr-lp:
   ret
 inttostr-buf: reserve #5 bytes
 
+inttostr-clr:
+  ldc $4
+  ldd $00
+  lds inttostr-buf
+inttostr-clr-lp:
+  storb %d
+  inx %s
+  loop inttostr-clr-lp
+  ret
+
 ; puti - Output a 16-bit integer number
 ; Arguments:
 ; A - Number
@@ -82,6 +92,7 @@ puti:
   lds inttostr-buf
   ldc $05
   call write
+  call inttostr-clr
   ret
 
 ; strcmp - Check if two strings are equal
@@ -441,7 +452,7 @@ com-govnosEXEC-color:
   push '^['          int $02
   push '['           int $02
   push '3'           int $02
-  push %a add %a #48 int $02
+  call puti
   push 'm'           int $02
   push '$'           int $02
 
@@ -499,6 +510,29 @@ com-govnosEXEC-gsfetch-gc16x:
   lds proc-00M
   call puts
 com-govnosEXEC-gsfetch-end:
+  lds gsfc-memM
+  call puts
+
+  ldd $0000
+  ldb bootsecend
+  sub %d %b
+  add %d $02
+  lda #62
+  call puti
+
+  lds gsfc-memN
+  call puts
+
+  ldd $02
+  cpuid ; Get memory size
+  lda %d
+  dex %a ; in case of 65,536 being 0
+  div %a #1000
+  call puti
+
+  lds gsfc-memO
+  call puts
+
   lds gsfc-backM ; Logo
   call puts
 
@@ -557,6 +591,7 @@ bschk:         bytes "Backspace$^@"
 dir-00msg:     bytes "^[[91mdir is not fully implemented^[[0m$^@"
 help-msg:      bytes "GovnOS Help manual page 1/1$"
                bytes "  cls       Clear the screen$"
+               bytes "  color     Change the text color$"
                bytes "  dir       List directories$"
                bytes "  drive     Show if any drive is connected$"
                bytes "  echo      Write text to the screen$"
@@ -570,17 +605,20 @@ exec-statusM:  bytes "Executing command ...$^@"
 fre00-msg:     bytes " bytes free$^@"
 dir00-msg:     bytes "Drive ^@"
 dir01-msg:     bytes "$Contents of the drive:$  no shit make the driver first$^@"
-color00-msg:   bytes "Enter the color number (0-15): ^@"
+color00-msg:   bytes "Enter the color number (0-7): ^@"
 ; GSFETCH
-gsfc-stM:      bytes "            ^[[97mgsfetch$^[[0m            ---------$^@"
-gsfc-hostM:    bytes "            ^[[97mHost: ^[[0m^@"
-gsfc-osM:      bytes "$            ^[[97mOS: ^[[0m^@"
-gsfc-cpuM:     bytes "$            ^[[97mCPU: ^[[0m^@"
-gsfc-backM:    bytes "^[[5A^[[33m .     . .$"
-               bytes            "    A     .$"
-               bytes            "   (=) .$"
-               bytes            " (=====)$"
-               bytes            "(========)^[[0m$^@"
+gsfc-stM:      bytes "             ^[[97mgsfetch$^[[0m             ---------$^@"
+gsfc-hostM:    bytes "             ^[[97mHost: ^[[0m^@"
+gsfc-osM:      bytes "$             ^[[97mOS: ^[[0m^@"
+gsfc-cpuM:     bytes "$             ^[[97mCPU: ^[[0m^@"
+gsfc-memM:     bytes "             ^[[97mMemory: ^[[0m^@"
+gsfc-memN:     bytes "KB/^@"
+gsfc-memO:     bytes "KB$^@"
+gsfc-backM:    bytes "^[[6A^[[33m  .     . .$"
+               bytes            "     A     .$"
+               bytes            "    (=) .$"
+               bytes            "  (=====)$"
+               bytes            " (========)^[[0m$$^@"
 
 ; Kernel panic
 ; 0 - Processor error
@@ -608,11 +646,11 @@ drvDSC-msg:    bytes "Disk disconnected, A/ is an empty byte stream.$"
 env-PS:        bytes "A/^$ ^@^@^@^@^@^@^@"
 env-PCNAME:    bytes "GovnPC Ultra^@^@^@^@"
 ; Constant environment variables
-envc-OSNAME:   bytes "GovnOS 0.0.1^@^@^@^@"
+envc-OSNAME:   bytes "GovnOS 0.0.2^@^@^@^@"
 
 ; Info
 OS-RELEASE:    bytes "^[[96mGovnOS version 0.0.1 (alpha)$"
-               bytes "Date of creation: 01/06/2025$"
+               bytes "Release date: 01/12/2025$"
                bytes "$(c) Xi816, 2025"
                bytes "^[[0m$^@"
 
