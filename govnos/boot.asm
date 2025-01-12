@@ -517,7 +517,9 @@ com-govnosEXEC-gsfetch-end:
   ldb bootsecend
   sub %d %b
   add %d $02
-  lda #62
+  lda %d
+  div %a #1024
+  inx %a ; maybe
   call puti
 
   lds gsfc-memN
@@ -527,7 +529,8 @@ com-govnosEXEC-gsfetch-end:
   cpuid ; Get memory size
   lda %d
   dex %a ; in case of 65,536 being 0
-  div %a #1000
+  div %a #1024
+  inx %a ; maybe
   call puti
 
   lds gsfc-memO

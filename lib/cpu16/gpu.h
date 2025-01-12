@@ -7,7 +7,7 @@
 #define gravno_start \
   SDL_Init(SDL_INIT_EVERYTHING); \
   SDL_Window* WIN = SDL_CreateWindow( \
-      "Gravno Display", 100, 100, WINW, WINH, SDL_WINDOW_SHOWN); \
+      "Gravno Display", 500, 100, WINW, WINH, SDL_WINDOW_SHOWN); \
   SDL_Renderer* renderer = SDL_CreateRenderer( \
       WIN, -1, SDL_RENDERER_ACCELERATED | SDL_RENDERER_PRESENTVSYNC);
 
