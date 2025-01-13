@@ -70,12 +70,16 @@ U8 main(I32 argc, I8** argv) {
   // CPU
   GC gc;
   fread(gc.mem, 1, flsize, fl);
-  fread(gc.rom, 1, dflsize, dfl);
-  gc.pin |= 0b00000000;
+  gc.pin &= 0b01111111;
   if (driveboot) {
+    fread(gc.rom, 1, dflsize, dfl);
     gc.pin |= 0b10000000; // 1 - Drive is connected
     loadBootSector(gc.rom, gc.mem);
     fclose(dfl);
+  }
+  if (!driveboot) { // Setup the disk so disk readers do not crash
+    gc.rom[0x00] = 0x60;
+    gc.rom[0x11] = '#';
   }
   fclose(fl);
   Reset(&gc, driveboot);

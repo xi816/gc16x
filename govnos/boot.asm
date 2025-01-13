@@ -1,4 +1,4 @@
-jmp boot
+reboot: jmp boot
 
 ; GovnFS signature bytes that are not allowed in code:
 ; F0, F1, F2, F7
@@ -176,6 +176,22 @@ memcpy:
   inx %a
   inx %b
   loop memcpy
+  ret
+
+; strcpy - Copy one string into another location
+; Arguments:
+; A - Target
+; B - Destination
+strcpy:
+  ldd $00
+  lds %a
+  lodsb
+  ldg %b
+  stgrb %s
+  inx %a
+  inx %b
+  cmp %a $00 ; Target has no more bytes to copy
+  jmne strcpy
   ret
 
 ; scani - Scan an integer from standard input
@@ -414,6 +430,13 @@ com-govnos-process: ; Process the command
   cmp %a $00
   jme com-govnos
 
+  ; reboot
+  lda comm
+  ldb instFULL-rebt
+  call strcmp
+  cmp %a $00
+  jme com-govnosEXEC-reboot
+
   ; info
   lda comm
   ldb instFULL-info
@@ -592,6 +615,11 @@ com-govnosEXEC-exit:
   call puts
   jmp com-govnos-term
 
+com-govnosEXEC-reboot:
+  lds cls-seq
+  call puts
+  jmp reboot
+
 ; Shutdown and termination
 fre:
   ldd $0000
@@ -631,6 +659,7 @@ help-msg:      bytes "GovnOS Help manual page 1/1$"
                bytes "  help      Show help$"
                bytes "  hlt       Halt the system (Kernel panic 6,0)$"
                bytes "  info      Show OS release info$"
+               bytes "  reboot    Reboot GovnOS$"
                bytes "  retr      Restart the shell$^@"
 exec-statusM:  bytes "Executing command ...$^@"
 fre00-msg:     bytes " bytes free$^@"
@@ -675,13 +704,13 @@ drvDSC-msg:    bytes "Disk disconnected, A/ is an empty byte stream.$"
 
 ; Environment variables
 ; 11 bytes
-env-PS:        bytes "A/^$ ^@^@^@^@^@^@^@"
+env-PS:        bytes " /^$ ^@^@^@^@^@^@^@"
 env-PCNAME:    bytes "GovnPC Ultra^@^@^@^@"
 ; Constant environment variables
 envc-OSNAME:   bytes "GovnOS 0.0.2^@^@^@^@"
 
 ; Info
-OS-RELEASE:    bytes "^[[96mGovnOS version 0.0.1 (alpha)$"
+OS-RELEASE:    bytes "^[[96mGovnOS version 0.0.2 (alpha)$"
                bytes "Release date: 01/12/2025$"
                bytes "$(c) Xi816, 2025"
                bytes "^[[0m$^@"
@@ -701,6 +730,7 @@ instFULL-colr: bytes "color^@"
 instFULL-help: bytes "help^@"
 instFULL-hlt:  bytes "hlt^@"
 instFULL-exit: bytes "exit^@"
+instFULL-rebt: bytes "reboot^@"
 instFULL-retr: bytes "retr^@"
 instFULL-info: bytes "info^@"
 instFULL-drve: bytes "drive^@"
@@ -712,5 +742,6 @@ bad-inst-msg:  bytes "Bad command.$^@"
 ; Buffers
 comm:          reserve #64 bytes
 commi:         reserve #1 bytes
+
 bootsecend:    bytes $AA $55
 

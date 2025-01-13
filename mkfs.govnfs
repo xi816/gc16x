@@ -15,12 +15,14 @@ def mkfsheader(disk, ds): #                                       v
                                                         # Filesystem name (11 bytes)
                                                         # Serial number (4 bytes)
   disk.write(bytes((ds%256,)));                         # Disk size in sectors (1 byte)
-  disk.write(b"A");                                     # Disk letter (1 byte)
+  dl = bytes((input("Drive letter: (default: A): ").encode()[0],)); # Disk letter (1 byte)
+  if (dl[0] not in range(65, 91)): dl = b"A";              # and....
+  disk.write(dl);                                       # AAAAAAAAAAND
   disk.write(bytes(14));                                # Reserved (14 bytes)
   return 0;
 
 def mkfsfill(disk, ds):
-  disk.write(b"\0"*(ds-headersize));
+  disk.write(bytes(ds-headersize));
   return 0;
 
 def mkfsmain(diskname):
