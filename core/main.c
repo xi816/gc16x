@@ -1,3 +1,4 @@
+#include <time.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <unistd.h>
@@ -21,6 +22,7 @@ U8 loadBootSector(U8* drive, U8* mem) {
 }
 
 U8 main(I32 argc, I8** argv) {
+  srand(time(NULL));
   new_st;
   I8 dfn[strlen(argv[1])]; // Disk filename buffer
   I8 fn[strlen(argv[1])]; // Memory filename buffer

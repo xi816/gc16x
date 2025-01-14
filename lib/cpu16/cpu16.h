@@ -177,6 +177,10 @@ U8 INT(GC* gc, bool ri) {
       GGpage(&(gc->gg), gc->renderer);
       break;
     }
+    case INT_RAND: {
+      gc->r.DX = rand() % 65536;
+      break;
+    }
     default:
       printf("Illegal interrupt %02X\n", val);
       return 1;
