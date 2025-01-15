@@ -32,7 +32,8 @@ WHI    = " \r\0\t";
 DIGEXT = "0123456789ABCDEF";
 KEY2   = [
   "lda", "ldb", "ldc", "ldd", "lds", "ldg", "push", "int", "lodsb", "lodgb", "cmp", "inx", "dex", "jme", "jmne", "ret", "jmp",
-  "call", "nop", "loop", "cop", "storb", "stgrb", "cpuid", "hlt", "pop", "add", "sub", "div", "brk", "ldds", "re", "rne", "mul"
+  "call", "nop", "loop", "cop", "storb", "stgrb", "cpuid", "hlt", "pop", "add", "sub", "div", "brk", "ldds", "re", "rne", "mul",
+  "trap"
 ];
 KEYR   = ["a", "b", "c", "d", "s", "g", "sp", "bp"];
 regids = ["a", "b", "c", "d", "s", "g"];
@@ -232,7 +233,7 @@ def Parse(toks: list) -> list:
           pos += 2;
         elif (toks[pos+1][0] == T_REG): # LDA register
           ast.append([ASTINS, "lda:r", toks[pos+1][1], pc]);
-          pc += 3; # 66 A5 00
+          pc += 2; # 66 A5 00
           pos += 2;
         elif (toks[pos+1][0] == T_0ID): # LDA address (label)
           ast.append([ASTINS, "lda:l", toks[pos+1][1], pc]);
@@ -252,7 +253,7 @@ def Parse(toks: list) -> list:
           pos += 2;
         elif (toks[pos+1][0] == T_REG): # LDB register
           ast.append([ASTINS, "ldb:r", toks[pos+1][1], pc]);
-          pc += 3;
+          pc += 2;
           pos += 2;
         elif (toks[pos+1][0] == T_0ID): # LDB address (label)
           ast.append([ASTINS, "ldb:l", toks[pos+1][1], pc]);
@@ -272,7 +273,7 @@ def Parse(toks: list) -> list:
           pos += 2;
         elif (toks[pos+1][0] == T_REG): # LDC register
           ast.append([ASTINS, "ldc:r", toks[pos+1][1], pc]);
-          pc += 3;
+          pc += 2;
           pos += 2;
         elif (toks[pos+1][0] == T_0ID): # LDC address (label)
           ast.append([ASTINS, "ldc:l", toks[pos+1][1], pc]);
@@ -292,7 +293,7 @@ def Parse(toks: list) -> list:
           pos += 2;
         elif (toks[pos+1][0] == T_REG): # LDD register
           ast.append([ASTINS, "ldd:r", toks[pos+1][1], pc]);
-          pc += 3;
+          pc += 2;
           pos += 2;
         elif (toks[pos+1][0] == T_0ID): # LDD address (label)
           ast.append([ASTINS, "ldd:l", toks[pos+1][1], pc]);
@@ -312,7 +313,7 @@ def Parse(toks: list) -> list:
           pos += 2;
         elif (toks[pos+1][0] == T_REG): # LDS REG16
           ast.append([ASTINS, "lds:r", toks[pos+1][1], pc]);
-          pc += 3;
+          pc += 2;
           pos += 2;
         elif (toks[pos+1][0] == T_0ID): # LDS ADDR16(LABEL)
           ast.append([ASTINS, "lds:l", toks[pos+1][1], pc]);
@@ -332,7 +333,7 @@ def Parse(toks: list) -> list:
           pos += 2;
         elif (toks[pos+1][0] == T_REG): # LDG register
           ast.append([ASTINS, "ldg:r", toks[pos+1][1], pc]);
-          pc += 3;
+          pc += 2;
           pos += 2;
         elif (toks[pos+1][0] == T_0ID): # LDG address (label)
           ast.append([ASTINS, "ldg:l", toks[pos+1][1], pc]);
@@ -541,6 +542,10 @@ def Parse(toks: list) -> list:
         ast.append([ASTINS, "stgrb:r", toks[pos+1][1], pc]);
         pc += 3;
         pos += 2;
+      elif (toks[pos][1] == "trap"): # TRAP
+        ast.append([ASTINS, "trap:0", 0, pc]);
+        pc += 2;
+        pos += 1;
       elif (toks[pos][1] == "brk"): # BRK
         ast.append([ASTINS, "brk:0", 0, pc]);
         pc += 1;
@@ -602,8 +607,7 @@ def CompileGC16X(prog: list, labs: dict):
         code.append(prog[pos][2] >> 8);
         pos += 1;
       elif (prog[pos][1] == "lda:r"): # LDA register
-        code.append(0x66);
-        code.append(0xA5);
+        code.append(0x77);
         code.append(prog[pos][2]);
         pos += 1;
       elif (prog[pos][1] == "lda:l"): # LDA immediate (label)
@@ -625,8 +629,7 @@ def CompileGC16X(prog: list, labs: dict):
         code.append(prog[pos][2] >> 8);
         pos += 1;
       elif (prog[pos][1] == "ldb:r"): # LDB register
-        code.append(0x66);
-        code.append(0xA6);
+        code.append(0x78);
         code.append(prog[pos][2]);
         pos += 1;
       elif (prog[pos][1] == "ldb:l"): # LDB immediate (label)
@@ -654,8 +657,7 @@ def CompileGC16X(prog: list, labs: dict):
         code.append(prog[pos][2] >> 8);
         pos += 1;
       elif (prog[pos][1] == "ldc:r"): # LDC register
-        code.append(0x66);
-        code.append(0xA7);
+        code.append(0x79);
         code.append(prog[pos][2]);
         pos += 1;
       elif (prog[pos][1] == "ldc:b"): # LDC absolute
@@ -677,8 +679,7 @@ def CompileGC16X(prog: list, labs: dict):
         code.append(prog[pos][2] >> 8);
         pos += 1;
       elif (prog[pos][1] == "ldd:r"): # LDD register
-        code.append(0x66);
-        code.append(0xA8);
+        code.append(0x7A);
         code.append(prog[pos][2]);
         pos += 1;
       elif (prog[pos][1] == "ldd:b"): # LDD absolute
@@ -700,8 +701,7 @@ def CompileGC16X(prog: list, labs: dict):
         code.append(val >> 8);
         pos += 1;
       elif (prog[pos][1] == "lds:r"): # LDS register
-        code.append(0x66);
-        code.append(0xA9);
+        code.append(0x7B);
         code.append(prog[pos][2]);
         pos += 1;
       elif (prog[pos][1] == "lds:b"): # LDS absolute
@@ -717,8 +717,7 @@ def CompileGC16X(prog: list, labs: dict):
         code.append(prog[pos][2] >> 8);
         pos += 1;
       elif (prog[pos][1] == "ldg:r"): # LDG register
-        code.append(0x66);
-        code.append(0xAA);
+        code.append(0x7C);
         code.append(prog[pos][2]);
         pos += 1;
       elif (prog[pos][1] == "ldg:l"): # LDG immediate (label)
@@ -877,6 +876,10 @@ def CompileGC16X(prog: list, labs: dict):
         val = labs[prog[pos][2]];
         code.append(val % 256);
         code.append(val >> 8);
+        pos += 1;
+      elif (prog[pos][1] == "trap:0"): # TRAP
+        code.append(0x0F);
+        code.append(0x9D);
         pos += 1;
       elif (prog[pos][1] == "brk:0"): # BRK
         code.append(0x00);

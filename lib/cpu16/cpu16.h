@@ -44,6 +44,10 @@ struct GC16X {
 };
 typedef struct GC16X GC;
 
+U0 PageDump(GC gc, U8 page);
+U0 StackDump(GC gc, U16 c);
+U0 RegDump(GC gc);
+
 gcbyte ReadByte(GC gc, U16 addr) {
   return gc.mem[addr];
 }
@@ -195,6 +199,16 @@ U8 INT0(GC* gc) { // 0F C2
 
 U8 INT1(GC* gc) { // 0F C3
   return INT(gc, true);
+}
+
+U8 TRAP(GC* gc) { // 0F 9D
+  printf("\n\033[31mTrapped\033[0m at \033[33m%04X\033[0m\n", gc->r.PC);
+  StackDump(*gc, 10);
+  RegDump(*gc);
+  puts("-- Press any key to continue --");
+  getchar();
+  gc->r.PC++;
+  return 0;
 }
 
 U8 CPUID(GC* gc) {  // 0F E9
@@ -971,6 +985,18 @@ U8 LDG1(GC* gc) {   // 66 AA
   return 0;
 }
 
+U8 LDSP1(GC* gc) {   // 66 AB
+  gc->r.SP = *ReadReg(gc, gc->mem[gc->r.PC+1]);
+  gc->r.PC += 2;
+  return 0;
+}
+
+U8 LDBP1(GC* gc) {   // 66 AC
+  gc->r.BP = *ReadReg(gc, gc->mem[gc->r.PC+1]);
+  gc->r.PC += 2;
+  return 0;
+}
+
 U8 BHCl(GC* gc) {   // 83 00 - 83 07
   *ReadReg(gc, gc->mem[gc->r.PC]) &= 0b0000000011111111;
   gc->r.PC++;
@@ -1070,14 +1096,14 @@ U8 (*INSTS[256])() = {
   &LDA0 , &LDB0 , &LDC0 , &LDD0 , &LDS0 , &LDG0 , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &HLT  , &CLI  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &PG66 , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
-  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &LDA1 , &LDB1 , &LDC1 , &LDD1 , &LDS1 , &LDG1 , &LDSP1, &LDBP1, &UNK  ,
   &UNK  , &UNK  , &UNK  , &PG83 , &UNK  , &UNK  , &UNK  , &UNK  , &XCHG4, &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &DEXM , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
-  &ASL  , &ASL  , &ASL  , &ASL  , &ASL  , &ASL  , &ASL  , &ASL  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &INXM , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &LOOP , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &CALL , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &COP1 , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
-  &ASR  , &ASR  , &ASR  , &ASR  , &ASR  , &ASR  , &ASR  , &ASR  , &UNK  , &UNK  , &NOP  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &NOP  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &LFA  , &LAF  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK
 };
 
@@ -1091,7 +1117,7 @@ U8 (*INSTS_PG0F[256])() = {
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &POP1 , &UNK  , &UNK  , &UNK  , &PUSH0, &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
-  &PUSH1, &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &PUSH1, &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &TRAP , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &INT0 , &INT1 , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
@@ -1130,7 +1156,7 @@ U8 (*INSTS_PG66[256])() = {
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &LDAAG, &LDBAG, &LDCAG, &LDDAG, &LDSAG, &LDGAG, &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &LDA0S, &LDB0S, &LDC0S, &LDD0S, &LDS0S, &LDG0S, &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &LDA0G, &LDB0G, &LDC0G, &LDD0G, &LDS0G, &LDG0G, &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
-  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &LDA1 , &LDB1 , &LDC1 , &LDD1 , &LDS1 , &LDG1 , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
@@ -1200,17 +1226,25 @@ U0 StackDump(GC gc, U16 c) {
 }
 
 U0 RegDump(GC gc) {
-  printf("\033[1;20H\033[44mA  %04X\033[0m\n", gc.r.AX);
-  printf("\033[2;20H\033[44mB  %04X\033[0m\n", gc.r.BX);
-  printf("\033[3;20H\033[44mC  %04X\033[0m\n", gc.r.CX);
-  printf("\033[4;20H\033[44mD  %04X\033[0m\n", gc.r.DX);
-  printf("\033[5;20H\033[44mS  %04X\033[0m ASCII: %c\n", gc.r.SI, gc.r.SI);
-  printf("\033[6;20H\033[44mG  %04X\033[0m ASCII: %c\n", gc.r.GI, gc.r.GI);
-  printf("\033[9;20H\033[44mSP %04X\033[0m\n", gc.r.SP);
-  printf("\033[10;20H\033[44mBP %04X\033[0m\n", gc.r.BP);
-  printf("\033[11;20H\033[44mPC %04X\033[0m\n\n", gc.r.PC);
-  printf("\033[12;20H\033[44mPS %08b\033[0m\n", gc.r.PS);
-  printf("\033[13;20H\033[44m   -I---E-C\033[0m\n", gc.r.PS);
+  printf("\033[11A\033[20C\033[44mAX %04X\033[0m\n", gc.r.AX);
+  printf("\033[20C\033[44mBX %04X\033[0m\n", gc.r.BX);
+  printf("\033[20C\033[44mCX %04X\033[0m\n", gc.r.CX);
+  printf("\033[20C\033[44mDX %04X\033[0m\n", gc.r.DX);
+  printf("\033[20C\033[44mSI %04X\033[0m ASCII: %c\n", gc.r.SI, gc.r.SI);
+  printf("\033[20C\033[44mGI %04X\033[0m ASCII: %c\n", gc.r.GI, gc.r.GI);
+  printf("\033[20C\033[44mEX %04X\033[0m\n", gc.r.EX);
+  printf("\033[20C\033[44mFX %04X\033[0m\n", gc.r.FX);
+  printf("\033[20C\033[44mHX %04X\033[0m\n", gc.r.HX);
+  printf("\033[20C\033[44mLX %04X\033[0m\n", gc.r.LX);
+  printf("\033[20C\033[44mX  %04X\033[0m\n", gc.r.X);
+  printf("\033[20C\033[44mY  %04X\033[0m\n", gc.r.Y);
+  printf("\033[20C\033[44mIX %04X\033[0m ASCII: %c\n", gc.r.IX, gc.r.IX);
+  printf("\033[20C\033[44mIY %04X\033[0m ASCII: %c\n", gc.r.IY, gc.r.IY);
+  printf("\033[20C\033[44mSP %04X\033[0m\n", gc.r.SP);
+  printf("\033[20C\033[44mBP %04X\033[0m\n", gc.r.BP);
+  printf("\033[20C\033[44mPC %04X\033[0m\n\n", gc.r.PC);
+  printf("\033[20C\033[44mPS %08b\033[0m\n", gc.r.PS);
+  printf("\033[20C\033[44m   -I---E-C\033[0m\n", gc.r.PS);
 }
 
 U8 Exec(GC gc, const U32 memsize, SDL_Renderer* renderer) {
