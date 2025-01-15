@@ -164,6 +164,7 @@ def Lex(prog: str):
       while (prog[pos] in DIGEXT):
         buf += prog[pos];
         pos += 1;
+      print("buf: ", buf);
       pos += 1;
       toks.append((T_INT, int(buf, base=16)));
       buf = "";
