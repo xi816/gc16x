@@ -4,4 +4,5 @@
 #define INT_VIDEO_WRITE  0x0C
 #define INT_VIDEO_FLUSH  0x11
 #define INT_RAND         0x21
+#define INT_WAIT         0x22
 

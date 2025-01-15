@@ -15,10 +15,10 @@ struct gcregs {
   gcword SP;  // Stack pointer            $06
   gcword BP;  // Base pointer             $07
 
-  gcword EX;  // Accumulator              $08
-  gcword FX;  // Base                     $09
-  gcword HX;  // Counter                  $0A
-  gcword LX;  // Data                     $0B
+  gcword EX;  // Extra accumulator        $08
+  gcword FX;  // Extra accumulator        $09
+  gcword HX;  // High byte                $0A
+  gcword LX;  // Low byte                 $0B
   gcword X;   // X character              $0C
   gcword Y;   // Y character              $0D
   gcword IX;  // X index                  $0E
@@ -35,10 +35,19 @@ typedef struct gcregs gcregs_t;
 typedef struct gcrc gcrc_t;
 
 struct GC16X {
+  // Registers
   gcregs_t r;
+
+  // Memory and ROM
   gcbyte mem[MEMSIZE];
   gcbyte rom[ROMSIZE];
   gcbyte pin;
+
+  // Prefix flags
+  gcbyte disp_prefix; // Displacement prefix: define registers added to the address used in the instruction.
+                      // Can be: $91,$92,$93,$94,$95,$96,$97,$98,$99,$9A,$9B,$9C,$9D,$9E,$9F
+
+  // GPU
   gc_gg16 gg;
   SDL_Renderer* renderer;
 };
@@ -183,6 +192,10 @@ U8 INT(GC* gc, bool ri) {
     }
     case INT_RAND: {
       gc->r.DX = rand() % 65536;
+      break;
+    }
+    case INT_WAIT: {
+      usleep((U32)(gc->r.DX)*1000); // the maximum is about 65.5 seconds
       break;
     }
     default:
@@ -1226,25 +1239,25 @@ U0 StackDump(GC gc, U16 c) {
 }
 
 U0 RegDump(GC gc) {
-  printf("\033[11A\033[20C\033[44mAX %04X\033[0m\n", gc.r.AX);
-  printf("\033[20C\033[44mBX %04X\033[0m\n", gc.r.BX);
-  printf("\033[20C\033[44mCX %04X\033[0m\n", gc.r.CX);
-  printf("\033[20C\033[44mDX %04X\033[0m\n", gc.r.DX);
-  printf("\033[20C\033[44mSI %04X\033[0m ASCII: %c\n", gc.r.SI, gc.r.SI);
-  printf("\033[20C\033[44mGI %04X\033[0m ASCII: %c\n", gc.r.GI, gc.r.GI);
-  printf("\033[20C\033[44mEX %04X\033[0m\n", gc.r.EX);
-  printf("\033[20C\033[44mFX %04X\033[0m\n", gc.r.FX);
-  printf("\033[20C\033[44mHX %04X\033[0m\n", gc.r.HX);
-  printf("\033[20C\033[44mLX %04X\033[0m\n", gc.r.LX);
-  printf("\033[20C\033[44mX  %04X\033[0m\n", gc.r.X);
-  printf("\033[20C\033[44mY  %04X\033[0m\n", gc.r.Y);
-  printf("\033[20C\033[44mIX %04X\033[0m ASCII: %c\n", gc.r.IX, gc.r.IX);
-  printf("\033[20C\033[44mIY %04X\033[0m ASCII: %c\n", gc.r.IY, gc.r.IY);
-  printf("\033[20C\033[44mSP %04X\033[0m\n", gc.r.SP);
-  printf("\033[20C\033[44mBP %04X\033[0m\n", gc.r.BP);
-  printf("\033[20C\033[44mPC %04X\033[0m\n\n", gc.r.PC);
-  printf("\033[20C\033[44mPS %08b\033[0m\n", gc.r.PS);
-  printf("\033[20C\033[44m   -I---E-C\033[0m\n", gc.r.PS);
+  printf("\033[11A\033[10CAX %04X\n", gc.r.AX);
+  printf("\033[10CBX %04X\n",           gc.r.BX);
+  printf("\033[10CCX %04X\n",           gc.r.CX);
+  printf("\033[10CDX %04X\n",           gc.r.DX);
+  printf("\033[10CSI %04X ASCII: %c\n", gc.r.SI, gc.r.SI);
+  printf("\033[10CGI %04X ASCII: %c\n", gc.r.GI, gc.r.GI);
+  printf("\033[10CEX %04X\n",           gc.r.EX);
+  printf("\033[10CFX %04X\n",           gc.r.FX);
+  printf("\033[10CHX %04X\n",           gc.r.HX);
+  printf("\033[10CLX %04X\n",           gc.r.LX);
+  printf("\033[10CX  %04X\n",           gc.r.X);
+  printf("\033[10CY  %04X\n",           gc.r.Y);
+  printf("\033[10CIX %04X ASCII: %c\n", gc.r.IX, gc.r.IX);
+  printf("\033[10CIY %04X ASCII: %c\n", gc.r.IY, gc.r.IY);
+  printf("\033[10CSP %04X\n",           gc.r.SP);
+  printf("\033[10CBP %04X\n",           gc.r.BP);
+  printf("\033[10CPC %04X\n",           gc.r.PC);
+  printf("\033[10CPS %08b\n",           gc.r.PS);
+  printf("\033[10C   -I---Z-C\033[0m\n");
 }
 
 U8 Exec(GC gc, const U32 memsize, SDL_Renderer* renderer) {

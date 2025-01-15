@@ -24,8 +24,6 @@ U8 loadBootSector(U8* drive, U8* mem) {
 U8 main(I32 argc, I8** argv) {
   srand(time(NULL));
   new_st;
-  I8 dfn[strlen(argv[1])]; // Disk filename buffer
-  I8 fn[strlen(argv[1])]; // Memory filename buffer
   U16 driveboot;
 
   driveboot = 0x0000;
@@ -35,56 +33,52 @@ U8 main(I32 argc, I8** argv) {
     old_st;
     return 1;
   }
-  else if (argc == 3) { // Load disk
-    strcpy(dfn, argv[2]);
-    driveboot = 0x91EE;
+  else if (argc == 3) {
+    // Load from the disk
+    if ((!strcmp(argv[1], "disk")) || (!strcmp(argv[1], "-d")) || (!strcmp(argv[1], "--disk"))) {
+      driveboot = 0x91EE;
+    }
   }
   else if (argc > 3) {
     fprintf(stderr, "Expected 1 argument, got %d\n", argc-1);
     old_st;
     return 1;
   }
-  strcpy(fn, argv[1]);
 
-  FILE* fl = fopen(fn, "rb");
-  FILE* dfl;
-  U32 dflsize = 0;
-  if (fl == NULL) {
-    fprintf(stderr, "Error while opening %s\n", fn);
-    old_st;
-    return 1;
-  }
-  if (driveboot) {
-    dfl = fopen(dfn, "rb");
-    if (dfl == NULL) {
-      fprintf(stderr, "Error while opening %s\n", fn);
+  // Create a virtual CPU
+  GC gc;
+  gc.pin = 0b00000000; // Reset the pin
+  Reset(&gc, driveboot);
+
+  if (!driveboot) { // Load a memory dump
+    FILE* fl = fopen(argv[1], "rb");
+    if (fl == NULL) {
+      fprintf(stderr, "\033[31mError\033[0m while opening %s\n", argv[1]);
       old_st;
       return 1;
     }
-    fseek(dfl, 0, SEEK_END);
-    dflsize = ftell(dfl);
-    fseek(dfl, 0, SEEK_SET);
-  }
-  fseek(fl, 0, SEEK_END);
-  U32 flsize = ftell(fl);
-  fseek(fl, 0, SEEK_SET);
-
-  // CPU
-  GC gc;
-  fread(gc.mem, 1, flsize, fl);
-  gc.pin &= 0b01111111;
-  if (driveboot) {
-    fread(gc.rom, 1, dflsize, dfl);
-    gc.pin |= 0b10000000; // 1 - Drive is connected
-    loadBootSector(gc.rom, gc.mem);
-    fclose(dfl);
-  }
-  if (!driveboot) { // Setup the disk so disk readers do not crash
+    fread(gc.mem, 1, 65536, fl);
+    fclose(fl);
+    // Disk signaures for GovnFS (without them, fs drivers would not work)
     gc.rom[0x00] = 0x60;
     gc.rom[0x11] = '#';
+    gc.pin &= 0b01111111;
   }
-  fclose(fl);
-  Reset(&gc, driveboot);
+  else { // Load a disk
+    FILE* fl = fopen(argv[2], "rb");
+    if (fl == NULL) {
+      fprintf(stderr, "\033[31mError\033[0m while opening %s\n", argv[2]);
+      old_st;
+      return 1;
+    }
+    fread(gc.rom, 1, 65536, fl);
+    fclose(fl);
+    // Load the boot sector from $91EE into memory
+    loadBootSector(gc.rom, gc.mem);
+    // Setup the pin bit 7 to 1 (drive)
+    gc.pin |= 0b10000000;
+  }
+
   // GPU
   gravno_start;
   gc.renderer = renderer;
