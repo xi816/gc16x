@@ -17,13 +17,13 @@ reboot: jmp boot
 write:
   ldd $00
   sub %c $01
-write-lp:
+write_lp:
   ldg %s
   lodgb
   push %g
   int $02
   inx %s
-  loop write-lp
+  loop write_lp
   ret
 
 ; puts - Output string until NUL ($00)
@@ -52,36 +52,77 @@ strtok:
   ldc %s
   lds %d
   sub %c %b
-  inx dynptr
   ldd $00
   loop strtok
   ret
 
-; inttostr - Convert a 16-bit integer into a string
+; inttostr - Convert a 16_bit integer into a string
 ; Arguments:
 ; A - Number
 inttostr:
-  ldg inttostr-buf
+  ldg inttostr_buf
   add %g $04
-inttostr-lp:
+inttostr_lp:
   div %a #10 ; Divide and get the remainder into D
   add %d #48 ; Convert to ASCII
   lds %g
   storb %d
   dex %g
   cmp %a $00
-  jmne inttostr-lp
+  jmne inttostr_lp
   ret
-inttostr-buf: reserve #5 bytes
+inttostr_buf: reserve #5 bytes
 
-inttostr-clr:
+inttostr_clr:
   ldc $4
   ldd $00
-  lds inttostr-buf
-inttostr-clr-lp:
+  lds inttostr_buf
+inttostr_clr_lp:
   storb %d
   inx %s
-  loop inttostr-clr-lp
+  loop inttostr_clr_lp
+  ret
+
+; inttostr - Convert a 16-bit integer into a string with delimiters
+; Arguments:
+; A - Number
+; B - Locale delimitor symbol
+inttostrl:
+  ldg inttostrl_buf
+  ldc $00
+  add %g $05
+inttostrl_lp:
+  inx %c
+  div %a #10 ; Divide and get the remainder into D
+  add %d #48 ; Convert to ASCII
+  lds %g
+  storb %d
+  dex %g
+  push %c
+  div %c $03
+  pop %c
+  cmp %d $00
+  jme inttostrl_pd
+  cmp %a $00
+  jmne inttostrl_lp
+  ret
+inttostrl_pd: ; Put the delimiter
+  lds %g
+  storb %b
+  dex %g
+  cmp %a $00
+  jmne inttostrl_lp
+  ret
+inttostrl_buf: reserve #6 bytes ; the maximum value is 65,536 (6 bytes)
+
+inttostrl_clr:
+  ldc $5
+  ldd $00
+  lds inttostrl_buf
+inttostrl_clr_lp:
+  storb %d
+  inx %s
+  loop inttostrl_clr_lp
   ret
 
 ; puti - Output a 16-bit integer number
@@ -89,10 +130,22 @@ inttostr-clr-lp:
 ; A - Number
 puti:
   call inttostr
-  lds inttostr-buf
+  lds inttostr_buf
   ldc $05
   call write
-  call inttostr-clr
+  call inttostr_clr
+  ret
+
+; putid - Output a 16_bit integer number with delimiters
+; Arguments:
+; A - Number
+; B - Locale delimiter
+putid:
+  call inttostrl
+  lds inttostrl_buf
+  ldc $06
+  call write
+  call inttostrl_clr
   ret
 
 ; strcmp - Check if two strings are equal
@@ -100,31 +153,31 @@ puti:
 ; A - first string address
 ; B - second string address
 ; Returns:
-; A - status
+; A _ status
 strcmp:
   lds %a
   ldg %b
   lodsb
   lodgb
   cmp %s %g
-  jmne strcmp-fail
+  jmne strcmp_fail
   cmp %s $00
-  jme strcmp-eq
+  jme strcmp_eq
   inx %a
   inx %b
   jmp strcmp
-strcmp-eq:
+strcmp_eq:
   lda $00
   ret
-strcmp-fail:
+strcmp_fail:
   lda $01
   ret
 
-; pstrcmp - Check if two strings are equal ending in some character
+; pstrcmp - Check if two strings are equal ending in a predicate
 ; Arguments:
 ; A - first string address
 ; B - second string address
-; C - character
+; C - predicate character
 ; Returns:
 ; A - status
 pstrcmp:
@@ -133,16 +186,16 @@ pstrcmp:
   lodsb
   lodgb
   cmp %s %g
-  jmne pstrcmp-fail
+  jmne pstrcmp_fail
   cmp %s %c
-  jme pstrcmp-eq
+  jme pstrcmp_eq
   inx %a
   inx %b
   jmp pstrcmp
-pstrcmp-eq:
+pstrcmp_eq:
   lda $00
   ret
-pstrcmp-fail:
+pstrcmp_fail:
   lda $01
   ret
 
@@ -155,10 +208,10 @@ strnul:
   lds %a
   lodsb
   cmp %s $00
-  jme strnul-nul
+  jme strnul_nul
   lda $01
   ret
-strnul-nul:
+strnul_nul:
   lda $00
   ret
 
@@ -199,7 +252,7 @@ strcpy:
 ; A - number
 scani:
   lda $00
-scani-lp:
+scani_lp:
   int $01
   pop %b
   cmp %b $0A ; Check for Enter
@@ -213,281 +266,297 @@ scani-lp:
   int $02
   sub %b #48
   add %a %b
-  jmp scani-lp
+  jmp scani_lp
 
-; gfs-read-signature - Read the signature of the
+; scans - Scan a string from standard input
+; S - buffer address 0040
+scans:
+  int $01    ; Get character from input
+  pop %d
+
+  cmp %d $7F ; Check for Backspace
+  jme scans_bs
+  cmp %d $08
+  jme scans_bs
+
+  push %d    ; Output the character
+  int $02
+
+  ldg *qptr  ; Save into memory
+  add %s %g
+  storb %d
+  sub %s %g
+  inx qptr
+
+  cmp %d $0A ; Return if pressed Enter
+  re
+  jmp scans
+scans_bs: ; Handle backspace ($7F or $08)
+  ldg *qptr
+  cmp %g $00
+  jme scans
+scans_bs_strict:
+  dex qptr
+  push %s
+  lds bs_seq
+  call puts
+  pop %s
+  jmp scans
+
+; gfs_read_signature _ Read the signature of the
 ; drive (GovnFS filesystem)
 ; Returns:
-; magic-byte: magic byte
-; drive-letter: drive letter
-; disk-size: disk size
-; gfs-sign-sernum: serial number
-gfs-read-signature:
+; magic_byte: magic byte
+; drive_letter: drive letter
+; disk_size: disk size
+; gfs_sign_sernum: serial number
+gfs_read_signature:
   lds $0000 ; magic byte address (disk)
   ldds
-  lds magic-byte
+  lds magic_byte
   storb %a
 
   lds $0011 ; drive letter address (disk)
   ldds
-  lds drive-letter
+  lds drive_letter
   storb %a
 
   lds $0010 ; disk size (in sectors) address (disk)
   ldds
-  lds disk-size
+  lds disk_size
   storb %a
 
   lds $000C
   ldds
-  lds gfs-sign-sernum
+  lds gfs_sign_sernum
   storb %a
 
   lds $000D
   ldds
-  lds gfs-sign-sernum
+  lds gfs_sign_sernum
   inx %s
   storb %a
 
   lds $000E
   ldds
-  lds gfs-sign-sernum
+  lds gfs_sign_sernum
   add %s $02
   storb %a
 
   lds $000F
   ldds
-  lds gfs-sign-sernum
+  lds gfs_sign_sernum
   add %s $03
   storb %a
 
   lda %c
   ret
-gfs-sign-sernum: reserve #4 bytes
-magic-byte:      reserve #1 bytes
-disk-size:       reserve #1 bytes
-drive-letter:    reserve #1 bytes
+gfs_sign_sernum: reserve #4 bytes
+magic_byte:      reserve #1 bytes
+disk_size:       reserve #1 bytes
+drive_letter:    reserve #1 bytes
 
-; gfs-read-file - Read the file in the drive (GovnFS filesystem) and
+; gfs_read_file _ Read the file in the drive (GovnFS filesystem) and
 ; copy the file contents into an address
-; D - directory
-; G - filename
-; S - address to store data from a file
-gfs-read-file:
-  lds kp-1-1msg
+; D _ directory
+; G _ filename
+; S _ address to store data from a file
+gfs_read_file:
+  lds kp_1_1msg
   jmp fail
 
 ; Boot GovnOS
 boot:
-  lds st-msg
+  lds st_msg
   call puts
   ; hlt
-boot-start:
+boot_start:
   ; Find the current CPU
-  lds procchk-msg
+  lds procchk_msg
   call puts
   ldd $00
   cpuid
   cmp %d $00
-  jme boot-gc16x-cpu
-  jmp boot-unk-cpu
-boot-gc16x-cpu:
-  lds proc-00-msg
+  jme boot_gc16x_cpu
+  jmp boot_unk_cpu
+boot_gc16x_cpu:
+  lds proc_00_msg
   call puts
-  jmp boot-shell
-boot-unk-cpu:
-  lds proc-unk-msg
+  jmp boot_shell
+boot_unk_cpu:
+  lds proc_unk_msg
   call puts
-  lds kp-0-0msg
+  lds kp_0_0msg
   jmp fail
-boot-shell:
+boot_shell:
   ; Show memory usage
   call fre
   ; Start the shell
-  call com-govnos
+  call com_govnos
 
 fail:
   call puts
   hlt
 
-; com-govnos - GovnOS Shell
-com-govnos:
-  lds welcome-msg
+; com_govnos _ GovnOS Shell
+com_govnos:
+  lds welcome_msg
   call puts
 
   ; Read the disk signature
-  call gfs-read-signature
+  call gfs_read_signature
 
   ; Change the PS1 (shell prompt) to show
   ; the actual current drive
-  lds env-PS
-  ldb *drive-letter
+  lds env_PS
+  ldb *drive_letter
   storb %b
 
-  jmp com-govnos-prompt
-com-govnos-prompt: ; Print the prompt
-  lds env-PS
+  jmp com_govnos_prompt
+com_govnos_prompt: ; Print the prompt
+  lds env_PS
   call puts
-com-govnos-input:
-  int $01    ; Get character from input
-  pop %d     ; Save to D register
-  cmp %d $7F ; Check for Backspace (1)
-  jme com-govnos-bs
-  cmp %d $08 ; Check for Backspace (2)
-  jme com-govnos-bs
-  push %d    ; Output the
-  int $02    ; character
-  lds comm
-  ldg commi
-  lodgb
-  add %s %g
-  storb %d
-  inx commi
-  cmp %d $0A ; Check for Enter
-  jme com-govnos-process
-  jmp com-govnos-input
-com-govnos-term:
+com_govnos_input:
+  lds cline
+  call scans
+  jmp com_govnos_process
+com_govnos_term:
   push $00
   int $00
-com-govnos-bs: ; Handle backspace ($7F or $08)
-  ldg commi
-  lodgb
-  cmp %g $00
-  jme com-govnos-input
-com-govnos-bs-strict:
-  dex commi
-  lds bs-seq
-  call puts
-  jmp com-govnos-input
-com-govnos-process: ; Process the command
+com_govnos_process: ; Process the command
+  ; ldd $00
+  ; storb %d
+  lds cline
+  ldg *qptr
+  add %s %g
+  dex %s
   ldd $00
-  storb %d
-  lds commi
-  ldd $00
-  lodgb
   storb %d ; Load $00 (NUL) instead of $0A (Enter)
 
+  lds qptr
+  storb %d
+
   ; Empty command
-  lda comm
+  lda cline
   call strnul
   cmp %a $00
-  jme com-govnos-aftexec
+  jme com_govnos_aftexec
 
   ; dir
-  lda comm
-  ldb instFULL-dir
+  lda cline
+  ldb instFULL_dir
   call strcmp ; Assembly with your own library is easy right :D
   cmp %a $00  ; Check for 0 (equal status)
-  jme com-govnosEXEC-dir
+  jme com_govnosEXEC_dir
 
   ; cls
-  lda comm
-  ldb instFULL-cls
+  lda cline
+  ldb instFULL_cls
   call strcmp
   cmp %a $00
-  jme com-govnosEXEC-cls
+  jme com_govnosEXEC_cls
 
   ; color
-  lda comm
-  ldb instFULL-colr
+  lda cline
+  ldb instFULL_colr
   call strcmp
   cmp %a $00
-  jme com-govnosEXEC-color
+  jme com_govnosEXEC_color
 
   ; help
-  lda comm
-  ldb instFULL-help
+  lda cline
+  ldb instFULL_help
   call strcmp
   cmp %a $00
-  jme com-govnosEXEC-help
+  jme com_govnosEXEC_help
 
   ; hlt
-  lda comm
-  ldb instFULL-hlt
+  lda cline
+  ldb instFULL_hlt
   call strcmp
   cmp %a $00
-  jme com-govnosEXEC-hlt
+  jme com_govnosEXEC_hlt
 
   ; exit
-  lda comm
-  ldb instFULL-exit
+  lda cline
+  ldb instFULL_exit
   call strcmp
   cmp %a $00
-  jme com-govnosEXEC-exit
+  jme com_govnosEXEC_exit
 
   ; echo
-  lda comm
-  ldb instFULL-echo
+  lda cline
+  ldb instFULL_echo
   ldc $20 ; compare until space
   call pstrcmp
   cmp %a $00
-  jme com-govnosEXEC-echo
+  jme com_govnosEXEC_echo
 
   ; retr
-  lda comm
-  ldb instFULL-retr
+  lda cline
+  ldb instFULL_retr
   call strcmp
   cmp %a $00
-  jme com-govnos
+  jme com_govnos
 
   ; reboot
-  lda comm
-  ldb instFULL-rebt
+  lda cline
+  ldb instFULL_rebt
   call strcmp
   cmp %a $00
-  jme com-govnosEXEC-reboot
+  jme com_govnosEXEC_reboot
 
   ; info
-  lda comm
-  ldb instFULL-info
+  lda cline
+  ldb instFULL_info
   call strcmp
   cmp %a $00
-  jme com-govnosEXEC-info
+  jme com_govnosEXEC_info
 
   ; drive
-  lda comm
-  ldb instFULL-drve
+  lda cline
+  ldb instFULL_drve
   call strcmp
   cmp %a $00
-  jme com-govnosEXEC-drive
+  jme com_govnosEXEC_drive
 
   ; gsfetch
-  lda comm
-  ldb instFULL-gsfc
+  lda cline
+  ldb instFULL_gsfc
   call strcmp
   cmp %a $00
-  jme com-govnosEXEC-gsfetch
+  jme com_govnosEXEC_gsfetch
 
   ; Otherwise it's a bad instruction
-  lds bad-inst-msg
+  lds bad_inst_msg
   call puts
-com-govnos-aftexec:
-  jmp com-govnos-prompt
+com_govnos_aftexec:
+  jmp com_govnos_prompt
 
 ; Commands
-com-govnosEXEC-dir:
-  call gfs-read-signature
-  lds dir00-msg
+com_govnosEXEC_dir:
+  call gfs_read_signature
+  lds dir00_msg
   call puts
-  ldb *drive-letter
+  ldb *drive_letter
   push %b
   int $02
-  lds dir01-msg
+  lds dir01_msg
   call puts
 
-  lds dir-00msg
+  lds dir_00msg
   call puts
-  ; lds kp-1-1msg
+  ; lds kp_1_1msg
   ; call fail
-  jmp com-govnos-aftexec ; Go to a new task after execution
+  jmp com_govnos_aftexec ; Go to a new task after execution
 
-com-govnosEXEC-cls:
-  lds cls-seq
+com_govnosEXEC_cls:
+  lds cls_seq
   call puts
-  jmp com-govnos-aftexec
+  jmp com_govnos_aftexec
 
-com-govnosEXEC-color:
-  lds color00-msg
+com_govnosEXEC_color:
+  lds color00_msg
   call puts
   call scani
 
@@ -498,67 +567,67 @@ com-govnosEXEC-color:
   push 'm'  int $02
   push '$'  int $02
 
-  jmp com-govnos-aftexec
+  jmp com_govnos_aftexec
 
-com-govnosEXEC-help:
-  lds help-msg
+com_govnosEXEC_help:
+  lds help_msg
   call puts
-  jmp com-govnos-aftexec
+  jmp com_govnos_aftexec
 
-com-govnosEXEC-hlt:
-  lds kp-6-0msg
+com_govnosEXEC_hlt:
+  lds kp_6_0msg
   call puts
   hlt
 
-com-govnosEXEC-drive:
+com_govnosEXEC_drive:
   ldd $01
   cpuid
   cmp %d $00
-  jme com-govnosEXEC-driveDSC
-com-govnosEXEC-driveCNN:
-  lds drvCNN-msg00
+  jme com_govnosEXEC_driveDSC
+com_govnosEXEC_driveCNN:
+  lds drvCNN_msg00
   call puts
-  lds *drive-letter
+  lds *drive_letter
   push %s
   int $02
-  lds drvCNN-msg01
+  lds drvCNN_msg01
   call puts
 
-  jmp com-govnos-aftexec
-com-govnosEXEC-driveDSC:
-  lds drvDSC-msg
+  jmp com_govnos_aftexec
+com_govnosEXEC_driveDSC:
+  lds drvDSC_msg
   call puts
-  jmp com-govnos-aftexec
+  jmp com_govnos_aftexec
 
-com-govnosEXEC-gsfetch:
-  lds gsfc-stM
-  call puts
-
-  lds gsfc-hostM ; Host
-  call puts
-  lds env-PCNAME
+com_govnosEXEC_gsfetch:
+  lds gsfc_stM
   call puts
 
-  lds gsfc-osM ; OS
+  lds gsfc_hostM ; Host
   call puts
-  lds envc-OSNAME
+  lds env_PCNAME
   call puts
 
-  lds gsfc-cpuM ; CPU
+  lds gsfc_osM ; OS
+  call puts
+  lds envc_OSNAME
+  call puts
+
+  lds gsfc_cpuM ; CPU
   call puts
   ldd $00
   cpuid
   cmp %d $00
-  jme com-govnosEXEC-gsfetch-gc16x
-  lds proc-unkM
+  jme com_govnosEXEC_gsfetch_gc16x
+  lds proc_unkM
   call puts
-  jmp com-govnosEXEC-gsfetch-end
+  jmp com_govnosEXEC_gsfetch_end
 
-com-govnosEXEC-gsfetch-gc16x:
-  lds proc-00M
+com_govnosEXEC_gsfetch_gc16x:
+  lds proc_00M
   call puts
-com-govnosEXEC-gsfetch-end:
-  lds gsfc-memM
+com_govnosEXEC_gsfetch_end:
+  lds gsfc_memM
   call puts
 
   ldd $0000
@@ -573,7 +642,7 @@ com-govnosEXEC-gsfetch-end:
   lda %b
   call puti
 
-  lds gsfc-memN
+  lds gsfc_memN
   call puts
 
   ldd $02
@@ -584,39 +653,39 @@ com-govnosEXEC-gsfetch-end:
   inx %a ; maybe
   call puti
 
-  lds gsfc-memO
+  lds gsfc_memO
   call puts
 
-  lds gsfc-backM ; Logo
+  lds gsfc_backM ; Logo
   call puts
 
   push $0A
   int $02
-  jmp com-govnos-aftexec
+  jmp com_govnos_aftexec
 
-com-govnosEXEC-echo:
+com_govnosEXEC_echo:
   ; Progress to space
-  lds comm
+  lds cline
   ldb $20
   call strtok
   inx %s
   call puts
   push $0A
   int $02
-  jmp com-govnos-aftexec
+  jmp com_govnos_aftexec
 
-com-govnosEXEC-info:
-  lds OS-RELEASE
+com_govnosEXEC_info:
+  lds OS_RELEASE
   call puts
-  jmp com-govnos-aftexec
+  jmp com_govnos_aftexec
 
-com-govnosEXEC-exit:
-  lds exit-term-msg
+com_govnosEXEC_exit:
+  lds exit_term_msg
   call puts
-  jmp com-govnos-term
+  jmp com_govnos_term
 
-com-govnosEXEC-reboot:
-  lds cls-seq
+com_govnosEXEC_reboot:
+  lds cls_seq
   call puts
   jmp reboot
 
@@ -627,28 +696,29 @@ fre:
   sub %d %b
   add %d $02
   lda %d
-  call puti ; Output the number
+  ldb *locale_delim
+  call putid ; Output the number
 
-  lds fre00-msg
+  lds fre00_msg
   call puts
   ret
 
-com-govnos-shutdown:
-  lds exit-msg
+com_govnos_shutdown:
+  lds exit_msg
   call puts
-com-govnos-term:
+com_govnos_term:
   push $00
   int $00
 
 ; Text
-st-msg:        bytes "Loading GovnOS ...$^@"
-fail-msg:      bytes "Halting execution ...$^@"
-exit-msg:      bytes "$Shutting down ...$^@"
-exit-term-msg: bytes "exit$^@"
-welcome-msg:   bytes "Welcome to GovnOS!$To get help, type `help`$$^@"
+st_msg:        bytes "Loading GovnOS ...$^@"
+fail_msg:      bytes "Halting execution ...$^@"
+exit_msg:      bytes "$Shutting down ...$^@"
+exit_term_msg: bytes "exit$^@"
+welcome_msg:   bytes "Welcome to GovnOS!$To get help, type `help`$$^@"
 bschk:         bytes "Backspace$^@"
-dir-00msg:     bytes "^[[91mdir is not fully implemented^[[0m$^@"
-help-msg:      bytes "GovnOS Help manual page 1/1$"
+dir_00msg:     bytes "^[[91mdir is not fully implemented^[[0m$^@"
+help_msg:      bytes "GovnOS Help manual page 1/1$"
                bytes "  cls       Clear the screen$"
                bytes "  color     Change the text color$"
                bytes "  dir       List directories$"
@@ -661,56 +731,56 @@ help-msg:      bytes "GovnOS Help manual page 1/1$"
                bytes "  info      Show OS release info$"
                bytes "  reboot    Reboot GovnOS$"
                bytes "  retr      Restart the shell$^@"
-exec-statusM:  bytes "Executing command ...$^@"
-fre00-msg:     bytes " bytes free$^@"
-dir00-msg:     bytes "Drive ^@"
-dir01-msg:     bytes "$Contents of the drive:$  no shit make the driver first$^@"
-color00-msg:   bytes "Enter the color number (0-7): ^@"
+exec_statusM:  bytes "Executing command ...$^@"
+fre00_msg:     bytes " bytes free$^@"
+dir00_msg:     bytes "Drive ^@"
+dir01_msg:     bytes "$Contents of the drive:$  no shit make the driver first$^@"
+color00_msg:   bytes "Enter the color number (0-7): ^@"
 ; GSFETCH
-gsfc-stM:      bytes "             ^[[97mgsfetch$^[[0m             ---------$^@"
-gsfc-hostM:    bytes "             ^[[97mHost: ^[[0m^@"
-gsfc-osM:      bytes "$             ^[[97mOS: ^[[0m^@"
-gsfc-cpuM:     bytes "$             ^[[97mCPU: ^[[0m^@"
-gsfc-memM:     bytes "             ^[[97mMemory: ^[[0m^@"
-gsfc-memN:     bytes "KB/^@"
-gsfc-memO:     bytes "KB$^@"
-gsfc-backM:    bytes "^[[6A^[[33m  .     . .$"
+gsfc_stM:      bytes "             ^[[97mgsfetch$^[[0m             ---------$^@"
+gsfc_hostM:    bytes "             ^[[97mHost: ^[[0m^@"
+gsfc_osM:      bytes "$             ^[[97mOS: ^[[0m^@"
+gsfc_cpuM:     bytes "$             ^[[97mCPU: ^[[0m^@"
+gsfc_memM:     bytes "             ^[[97mMemory: ^[[0m^@"
+gsfc_memN:     bytes "KB/^@"
+gsfc_memO:     bytes "KB$^@"
+gsfc_backM:    bytes "^[[6A^[[33m  .     . .$"
                bytes            "     A     .$"
                bytes            "    (=) .$"
                bytes            "  (=====)$"
                bytes            " (========)^[[0m$$^@"
 
 ; Kernel panic
-; 0 - Processor error
-; 1 - Disk/Filesystem error
-; 41 - Unknown error
-kp-0-0msg:     bytes "Kernel panic: Unable to find processor type(0,0)$^@"
-kp-1-0msg:     bytes "Kernel panic: Unknown filesystem(1,0)$^@"
-kp-1-1msg:     bytes "Kernel panic: Could not read disk(1,1)$^@"
-kp-6-0msg:     bytes "Kernel panic: Triggered halt(6,0)$^@"
-kp-41-0msg:    bytes "Kernel panic: Kernel error(41,0)$^@"
+; 0 _ Processor error
+; 1 _ Disk/Filesystem error
+; 41 _ Unknown error
+kp_0_0msg:     bytes "Kernel panic: Unable to find processor type(0,0)$^@"
+kp_1_0msg:     bytes "Kernel panic: Unknown filesystem(1,0)$^@"
+kp_1_1msg:     bytes "Kernel panic: Could not read disk(1,1)$^@"
+kp_6_0msg:     bytes "Kernel panic: Triggered halt(6,0)$^@"
+kp_41_0msg:    bytes "Kernel panic: Kernel error(41,0)$^@"
 
 ; CPU types
-procchk-msg:   bytes "Checking CPU ...$^@"
-proc-00-msg:   bytes "CPU: Govno Core 16X$$^@"
-proc-unk-msg:  bytes "CPU: Unknown$$^@"
-proc-00M:      bytes "Govno Core 16X$^@"
-proc-unkM:     bytes "Unknown :($^@"
+procchk_msg:   bytes "Checking CPU ...$^@"
+proc_00_msg:   bytes "CPU: Govno Core 16X$$^@"
+proc_unk_msg:  bytes "CPU: Unknown$$^@"
+proc_00M:      bytes "Govno Core 16X$^@"
+proc_unkM:     bytes "Unknown :($^@"
 
-drvCNN-msg00:  bytes "Disk connected as ^@"
-drvCNN-msg01:  bytes "/$^@"
-drvDSC-msg:    bytes "Disk disconnected, A/ is an empty byte stream.$"
+drvCNN_msg00:  bytes "Disk connected as ^@"
+drvCNN_msg01:  bytes "/$^@"
+drvDSC_msg:    bytes "Disk disconnected, A/ is an empty byte stream.$"
                bytes "Loading without a disk can have serious issues for commands that use GovnFS filesystem$^@"
 
 ; Environment variables
 ; 11 bytes
-env-PS:        bytes " /^$ ^@^@^@^@^@^@^@"
-env-PCNAME:    bytes "GovnPC Ultra^@^@^@^@"
+env_PS:        bytes " /^$ ^@^@^@^@^@^@^@"
+env_PCNAME:    bytes "GovnPC Ultra^@^@^@^@"
 ; Constant environment variables
-envc-OSNAME:   bytes "GovnOS 0.0.2^@^@^@^@"
+envc_OSNAME:   bytes "GovnOS 0.0.2^@^@^@^@"
 
 ; Info
-OS-RELEASE:    bytes "^[[96mGovnOS version 0.0.2 (alpha)$"
+OS_RELEASE:    bytes "^[[96mGovnOS version 0.0.2 (alpha)$"
                bytes "Release date: 01/12/2025$"
                bytes "$(c) Xi816, 2025"
                bytes "^[[0m$^@"
@@ -719,29 +789,31 @@ OS-RELEASE:    bytes "^[[96mGovnOS version 0.0.2 (alpha)$"
 errno:         reserve #1 bytes
 dynptr:        reserve #1 bytes
 
+locale_delim:  bytes ","
+
 ; Control sequences
-bs-seq:        bytes "^H ^H^@"
-cls-seq:       bytes "^[[H^[[2J^@"
+bs_seq:        bytes "^H ^H^@"
+cls_seq:       bytes "^[[H^[[2J^@"
 
 ; Commands
-instFULL-dir:  bytes "dir^@"
-instFULL-cls:  bytes "cls^@"
-instFULL-colr: bytes "color^@"
-instFULL-help: bytes "help^@"
-instFULL-hlt:  bytes "hlt^@"
-instFULL-exit: bytes "exit^@"
-instFULL-rebt: bytes "reboot^@"
-instFULL-retr: bytes "retr^@"
-instFULL-info: bytes "info^@"
-instFULL-drve: bytes "drive^@"
-instFULL-gsfc: bytes "gsfetch^@"
+instFULL_dir:  bytes "dir^@"
+instFULL_cls:  bytes "cls^@"
+instFULL_colr: bytes "color^@"
+instFULL_help: bytes "help^@"
+instFULL_hlt:  bytes "hlt^@"
+instFULL_exit: bytes "exit^@"
+instFULL_rebt: bytes "reboot^@"
+instFULL_retr: bytes "retr^@"
+instFULL_info: bytes "info^@"
+instFULL_drve: bytes "drive^@"
+instFULL_gsfc: bytes "gsfetch^@"
 
-instFULL-echo: bytes "echo "
-bad-inst-msg:  bytes "Bad command.$^@"
+instFULL_echo: bytes "echo "
+bad_inst_msg:  bytes "Bad command.$^@"
 
 ; Buffers
-comm:          reserve #64 bytes
-commi:         reserve #1 bytes
+cline:          reserve #64 bytes
+qptr:           reserve #1 bytes
 
 bootsecend:    bytes $AA $55
 

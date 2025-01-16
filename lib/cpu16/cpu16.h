@@ -75,7 +75,7 @@ gcword* ReadReg(GC* gc, U8 regid) {
   // can only be changed using JMP, CALL,
   // and other control flow instructions.
   U16* regids[16] = {
-    &(gc->r.AX), &(gc->r.BX), &(gc->r.BX), &(gc->r.DX), &(gc->r.SI), &(gc->r.GI), &(gc->r.SP), &(gc->r.BP),
+    &(gc->r.AX), &(gc->r.BX), &(gc->r.CX), &(gc->r.DX), &(gc->r.SI), &(gc->r.GI), &(gc->r.SP), &(gc->r.BP),
     &(gc->r.EX), &(gc->r.FX), &(gc->r.HX), &(gc->r.LX), &(gc->r.X),  &(gc->r.Y),  &(gc->r.IX), &(gc->r.IY),
   };
   return regids[regid];
@@ -288,7 +288,7 @@ U8 ADDB0(GC* gc) {  // 10 09
 }
 
 U8 ADDC0(GC* gc) {  // 10 0A
-  gc->r.BX += ReadWord(*gc, gc->r.PC+1);
+  gc->r.CX += ReadWord(*gc, gc->r.PC+1);
   gc->r.PC += 3;
   return 0;
 }
@@ -324,7 +324,7 @@ U8 SUBB0(GC* gc) {  // 10 19
 }
 
 U8 SUBC0(GC* gc) {  // 10 1A
-  gc->r.BX -= ReadWord(*gc, gc->r.PC+1);
+  gc->r.CX -= ReadWord(*gc, gc->r.PC+1);
   gc->r.PC += 3;
   return 0;
 }
@@ -360,7 +360,7 @@ U8 MULB0(GC* gc) {  // 10 29
 }
 
 U8 MULC0(GC* gc) {  // 10 2A
-  gc->r.BX *= ReadWord(*gc, gc->r.PC+1);
+  gc->r.CX *= ReadWord(*gc, gc->r.PC+1);
   gc->r.PC += 3;
   return 0;
 }
@@ -401,8 +401,8 @@ U8 DIVB0(GC* gc) {  // 10 39
 
 U8 DIVC0(GC* gc) {  // 10 3A
   U16 val = ReadWord(*gc, gc->r.PC+1);
-  gc->r.DX = gc->r.BX % val; // The remainder is always stored into D
-  gc->r.BX /= val;
+  gc->r.DX = gc->r.CX % val; // The remainder is always stored into D
+  gc->r.CX /= val;
   gc->r.PC += 3;
   return 0;
 }
@@ -502,7 +502,7 @@ U8 INXB(GC* gc) {   // 10 C1
 }
 
 U8 INXC(GC* gc) {   // 10 C2
-  gc->r.BX++;
+  gc->r.CX++;
   gc->r.PC++;
   return 0;
 }
@@ -538,7 +538,7 @@ U8 DEXB(GC* gc) {   // 10 D1
 }
 
 U8 DEXC(GC* gc) {   // 10 D2
-  gc->r.BX--;
+  gc->r.CX--;
   gc->r.PC++;
   return 0;
 }
@@ -651,7 +651,7 @@ U8 LDB0(GC* gc) {   // 66 06
 }
 
 U8 LDC0(GC* gc) {   // 66 07
-  gc->r.BX = ReadWord(*gc, gc->r.PC+1);
+  gc->r.CX = ReadWord(*gc, gc->r.PC+1);
   gc->r.PC += 3;
   return 0;
 }
@@ -687,7 +687,7 @@ U8 LDBZ(GC* gc) {   // 66 16 -- LDB Zero Page
 }
 
 U8 LDCZ(GC* gc) {   // 66 17 -- LDC Zero Page
-  gc->r.BX = gc->mem[gc->mem[gc->r.PC+1]];
+  gc->r.CX = gc->mem[gc->mem[gc->r.PC+1]];
   gc->r.PC += 2;
   return 0;
 }
@@ -723,7 +723,7 @@ U8 LDBZS(GC* gc) {   // 66 26 -- LDG Zero Page,S
 }
 
 U8 LDCZS(GC* gc) {   // 66 27 -- LDG Zero Page,S
-  gc->r.BX = gc->mem[gc->mem[gc->r.PC+1]+gc->r.SI];
+  gc->r.CX = gc->mem[gc->mem[gc->r.PC+1]+gc->r.SI];
   gc->r.PC += 2;
   return 0;
 }
@@ -759,7 +759,7 @@ U8 LDBZG(GC* gc) {   // 66 36 -- LDG Zero Page,G
 }
 
 U8 LDCZG(GC* gc) {   // 66 37 -- LDG Zero Page,G
-  gc->r.BX = gc->mem[gc->mem[gc->r.PC+1]+gc->r.GI];
+  gc->r.CX = gc->mem[gc->mem[gc->r.PC+1]+gc->r.GI];
   gc->r.PC += 2;
   return 0;
 }
@@ -795,7 +795,7 @@ U8 LDBA(GC* gc) {    // 66 56 -- LDB Absolute
 }
 
 U8 LDCA(GC* gc) {    // 66 57 -- LDC Absolute
-  gc->r.BX = gc->mem[ReadWord(*gc, gc->r.PC+1)];
+  gc->r.CX = gc->mem[ReadWord(*gc, gc->r.PC+1)];
   gc->r.PC += 3;
   return 0;
 }
@@ -831,7 +831,7 @@ U8 LDBAS(GC* gc) {   // 66 66 -- LDB Absolute,S
 }
 
 U8 LDCAS(GC* gc) {   // 66 67 -- LDC Absolute,S
-  gc->r.BX = gc->mem[ReadWord(*gc, gc->r.PC+1)+gc->r.SI];
+  gc->r.CX = gc->mem[ReadWord(*gc, gc->r.PC+1)+gc->r.SI];
   gc->r.PC += 3;
   return 0;
 }
@@ -867,7 +867,7 @@ U8 LDBAG(GC* gc) {   // 66 76 -- LDB Absolute,G
 }
 
 U8 LDCAG(GC* gc) {   // 66 77 -- LDC Absolute,G
-  gc->r.BX = gc->mem[ReadWord(*gc, gc->r.PC+1)+gc->r.SI];
+  gc->r.CX = gc->mem[ReadWord(*gc, gc->r.PC+1)+gc->r.SI];
   gc->r.PC += 3;
   return 0;
 }
@@ -903,7 +903,7 @@ U8 LDB0S(GC* gc) {   // 66 86 -- LDB Immediate,S
 }
 
 U8 LDC0S(GC* gc) {   // 66 87 -- LDC Immediate,S
-  gc->r.BX = ReadWord(*gc, gc->r.PC+1)+gc->r.SI;
+  gc->r.CX = ReadWord(*gc, gc->r.PC+1)+gc->r.SI;
   gc->r.PC += 3;
   return 0;
 }
@@ -939,7 +939,7 @@ U8 LDB0G(GC* gc) {   // 66 96 -- LDB Immediate,G
 }
 
 U8 LDC0G(GC* gc) {   // 66 97 -- LDC Immediate,G
-  gc->r.BX = ReadWord(*gc, gc->r.PC+1)+gc->r.GI;
+  gc->r.CX = ReadWord(*gc, gc->r.PC+1)+gc->r.GI;
   gc->r.PC += 3;
   return 0;
 }
@@ -975,7 +975,7 @@ U8 LDB1(GC* gc) {   // 66 A6
 }
 
 U8 LDC1(GC* gc) {   // 66 A7
-  gc->r.BX = *ReadReg(gc, gc->mem[gc->r.PC+1]);
+  gc->r.CX = *ReadReg(gc, gc->mem[gc->r.PC+1]);
   gc->r.PC += 2;
   return 0;
 }
@@ -1057,8 +1057,8 @@ U8 INXM(GC* gc) {   // B0
 }
 
 U8 LOOP(GC* gc) {   // B8
-  if (gc->r.BX) {
-    gc->r.BX--;
+  if (gc->r.CX) {
+    gc->r.CX--;
     gc->r.PC = ReadWord(*gc, gc->r.PC+1);
   }
   else {
@@ -1265,26 +1265,6 @@ U8 Exec(GC gc, const U32 memsize, SDL_Renderer* renderer) {
   U8 st = false;
   while (!exc) {
     exc = (INSTS[gc.mem[gc.r.PC]])(&gc);
-    /*
-    for (U32 i = 0; i < 0x20; i++) {
-      printf("%02X ", gc.mem[0x619 + i]);
-    }
-    printf("  \033[32m%04X %04X\033[0m\n", gc.r.S, gc.r.G);
-    */
-    /*
-    if (gc.r.PC == 0x8A) {
-      st = true;
-    }
-    if (st) {
-      getchar();
-      fputs("\033[H\033[2J", stdout);
-      StackDump(gc, 10);
-      RegDump(gc);
-      puts("\0");
-    }
-    printf("PC: %04X\n", gc.r.PC);
-    puts("\0");
-    */
   }
   return exc;
 }
