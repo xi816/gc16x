@@ -1,8 +1,0 @@
-#!/usr/bin/bash
-if [ $# = 0 ]; then
-  printf "No disk given\n";
-  exit 1;
-fi
-
-./gc16 govnos/fallback.bin $1
-

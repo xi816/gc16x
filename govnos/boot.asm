@@ -136,7 +136,7 @@ puti:
   call inttostr_clr
   ret
 
-; putid - Output a 16_bit integer number with delimiters
+; putid - Output a 16-bit integer number with delimiters
 ; Arguments:
 ; A - Number
 ; B - Locale delimiter
@@ -153,7 +153,7 @@ putid:
 ; A - first string address
 ; B - second string address
 ; Returns:
-; A _ status
+; A - status
 strcmp:
   lds %a
   ldg %b
@@ -356,12 +356,36 @@ magic_byte:      reserve #1 bytes
 disk_size:       reserve #1 bytes
 drive_letter:    reserve #1 bytes
 
-; gfs_read_file _ Read the file in the drive (GovnFS filesystem) and
+; gfs_read_file - Read the file in the drive (GovnFS filesystem) and
 ; copy the file contents into an address
-; D _ directory
-; G _ filename
-; S _ address to store data from a file
+; D - directory
+; G - filename
+; S - address to store data from a file
 gfs_read_file:
+  lds com_file_full
+  str $F0
+  lda %s
+  ldb cline
+  call strcpy
+  ldb com_file_sign
+  call strcpy
+  lda $0020
+  ldb com_file_full
+  call dstrsubset
+  lds com_file_full
+  call strlen
+  add %s %b              ; S = file content start
+  ldg $3000              ; load the file into $3000
+
+  ; call flcpy (s -> src{disk}, g -> dst{mem})
+  ret
+
+; flcpy - Copy the file contents into memory (assuming
+;   %s is already loaded with the disk address to the file)
+; Arguments:
+; S - file contents disk address
+; G
+flcpy:
   lds kp_1_1msg
   jmp fail
 

@@ -347,6 +347,14 @@ def Parse(toks: list) -> list:
         else:
           print("Unknown ldg operand");
           exit(1);
+      elif (toks[pos][1] == "str"): # STR
+        if (toks[pos+1][0] == T_INT): # STR imm8
+          ast.append([ASTINS, "str:a", toks[pos+1][1]%256, pc]);
+          pc += 3;
+          pos += 2;
+        else:
+          print("Unknown str operand");
+          exit(1);
       elif (toks[pos][1] == "push"): # PUSH
         if (toks[pos+1][0] == T_INT): # PUSH immediate
           ast.append([ASTINS, "push:i", toks[pos+1][1], pc]);

@@ -39,6 +39,23 @@ strcat(com-file-full, comm);          comm = "hw"
 strcat(com-file-full, com-file-sign);
 strcmp(diskpointer, com-file-full);
 
+gfs_read_file:
+  lds com_file_full
+  str $F0
+  lda %s
+  ldb cline
+  call strcpy
+  ldb com_file_sign
+  call strcpy
+  lda $0020
+  ldb com_file_full
+  call dstrsubset
+  lds com_file_full
+  call strlen
+  add %s %b              ; S = file content start
+
+  call flcpy
+
 $43
 #67
           01000011

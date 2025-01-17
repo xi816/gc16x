@@ -1056,6 +1056,12 @@ U8 INXM(GC* gc) {   // B0
   return 0;
 }
 
+U8 STRb(GC* gc) {   // B1 -- Store byte into [%s] and increment %s
+  gc->mem[gc->r.S++] = gc->mem[gc->r.PC+1];
+  gc->r.PC += 2;
+  return 0;
+}
+
 U8 LOOP(GC* gc) {   // B8
   if (gc->r.CX) {
     gc->r.CX--;
@@ -1113,7 +1119,7 @@ U8 (*INSTS[256])() = {
   &UNK  , &UNK  , &UNK  , &PG83 , &UNK  , &UNK  , &UNK  , &UNK  , &XCHG4, &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &DEXM , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
-  &INXM , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &LOOP , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &INXM , &STRb , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &LOOP , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &CALL , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &COP1 , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &NOP  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
@@ -1239,7 +1245,7 @@ U0 StackDump(GC gc, U16 c) {
 }
 
 U0 RegDump(GC gc) {
-  printf("\033[11A\033[10CAX %04X\n", gc.r.AX);
+  printf("\033[11A\033[10CAX %04X\n",   gc.r.AX);
   printf("\033[10CBX %04X\n",           gc.r.BX);
   printf("\033[10CCX %04X\n",           gc.r.CX);
   printf("\033[10CDX %04X\n",           gc.r.DX);
