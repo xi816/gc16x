@@ -99,9 +99,9 @@ gcrc_t ReadRegClust(U8 clust) { // Read a register cluster
 }
 
 U8 UNK(GC* gc) {    // Unknown instruction
-  fprintf(stderr, "Unknown instruction %02X\nAt position %04X\n", gc->mem[gc->r.PC], gc->r.PC);
+  fprintf(stderr, "Illegal instruction %02X\nAt position %04X\n", gc->mem[gc->r.PC], gc->r.PC);
   old_st_legacy;
-  return 1;
+  return 0;
 }
 
 U8 JME0(GC* gc) {   // 0F 29
@@ -1030,18 +1030,6 @@ U8 CMPpi(GC* gc) {   // 69 -- Compare *reg16 and imm16
   return 0;
 }
 
-U8 BHCl(GC* gc) {   // 83 00 - 83 07
-  *ReadReg(gc, gc->mem[gc->r.PC]) &= 0b0000000011111111;
-  gc->r.PC++;
-  return 0;
-}
-
-U8 BLCl(GC* gc) {   // 83 08 - 83 0F
-  *ReadReg(gc, gc->mem[gc->r.PC]-0x08) &= 0b1111111100000000;
-  gc->r.PC++;
-  return 0;
-}
-
 U8 XCHG4(GC* gc) {  // 88
   gcrc_t rc = ReadRegClust(gc->mem[gc->r.PC+1]);
   U16 temp = rc.x;
@@ -1124,7 +1112,6 @@ U8 LAF(GC* gc) { // FA
 U8 PG0F(GC*); // Page 0F - Stack operations
 U8 PG10(GC*); // Page 10 - Register operations
 U8 PG66(GC*); // Page 66 - Load/Store operations
-U8 PG83(GC*); // Page 83 - Load/Store byte operations
 
 // Zero page instructions
 U8 (*INSTS[256])() = {
@@ -1136,7 +1123,7 @@ U8 (*INSTS[256])() = {
   &UNK  , &HLT  , &CLI  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &PG66 , &UNK  , &UNK  , &CMPpi, &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &LDA1 , &LDB1 , &LDC1 , &LDD1 , &LDS1 , &LDG1 , &LDSP1, &LDBP1, &UNK  ,
-  &UNK  , &UNK  , &UNK  , &PG83 , &UNK  , &UNK  , &UNK  , &UNK  , &XCHG4, &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &XCHG4, &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &DEXM , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &INXM , &STRb , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &LOOP , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
@@ -1203,25 +1190,6 @@ U8 (*INSTS_PG66[256])() = {
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK
 };
 
-U8 (*INSTS_PG83[256])() = {
-  &BHCl , &BHCl , &BHCl , &BHCl , &BHCl , &BHCl , &BHCl , &BHCl , &BLCl , &BLCl , &BLCl , &BLCl , &BLCl , &BLCl , &BLCl , &BLCl ,
-  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
-  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
-  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
-  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
-  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
-  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
-  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
-  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
-  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
-  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
-  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
-  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
-  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
-  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
-  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK
-};
-
 U8 PG0F(GC* gc) {   // 0FH
   gc->r.PC++;
   return (INSTS_PG0F[gc->mem[gc->r.PC]])(gc);
@@ -1235,11 +1203,6 @@ U8 PG10(GC* gc) {   // 10H
 U8 PG66(GC* gc) {   // 66H
   gc->r.PC++;
   return (INSTS_PG66[gc->mem[gc->r.PC]])(gc);
-}
-
-U8 PG83(GC* gc) {   // 83H
-  gc->r.PC++;
-  return (INSTS_PG83[gc->mem[gc->r.PC]])(gc);
 }
 
 U0 Reset(GC* gc, U16 driveboot) {
@@ -1291,6 +1254,9 @@ U8 Exec(GC gc, const U32 memsize, SDL_Renderer* renderer) {
   U8 st = false;
   while (!exc) {
     exc = (INSTS[gc.mem[gc.r.PC]])(&gc);
+    for (U16 i = 0xBCA; i < 0xBEA; i++)
+      printf("%02X ", gc.mem[i]);
+    putchar(10);
   }
   return exc;
 }

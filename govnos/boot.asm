@@ -28,12 +28,12 @@ write:
 ; Arguments:
 ; S - string address
 puts:
+  cmp *%si $00
+  re
   push *%si
   int $02
-  cmp *%si $00
   inx %si
-  jmne puts
-  ret
+  jmp puts
 
 ; strtok - Progress the string pointer until character
 ; Arguments:
@@ -246,7 +246,6 @@ strnul:
 ; B - Destination
 ; C - Number of bytes to copy
 memcpy:
-  ldd $00
   lds %ax
   lodsb
   ldg %bx
@@ -258,19 +257,19 @@ memcpy:
 
 ; strcpy - Copy one string into another location
 ; Arguments:
-; A - Destination
-; B - Target
+; A - Target
+; B - Destination
 strcpy:
-  trap
   lds *%ax
   ldg %bx
+  trap
   cmp %si $00 ; Target has no more bytes to copy
   re
   stgrb %si
+  trap
   inx %ax
   inx %bx
   jmp strcpy
-  ret
 
 ; dstrsubset - Find a specific string in the disk
 ; Arguments:
@@ -411,8 +410,8 @@ drive_letter:    reserve #1 bytes
 gfs_read_file:
   lds com_file_full
   str $F1
-  lda %si
-  ldb cline
+  lda com_file_predef
+  ldb %si
   call strcpy
   lds %ax
   ldg %bx
@@ -788,7 +787,6 @@ com_govnos.term:
 
 ; Text
 st_msg:        bytes "Loading GovnOS ...$^@"
-fail_msg:      bytes "Halting execution ...$^@"
 exit_msg:      bytes "$Shutting down ...$^@"
 exit_term_msg: bytes "exit$^@"
 welcome_msg:   bytes "Welcome to GovnOS!$To get help, type `help`$$^@"
@@ -807,7 +805,6 @@ help_msg:      bytes "GovnOS Help manual page 1/1$"
                bytes "  info      Show OS release info$"
                bytes "  reboot    Reboot GovnOS$"
                bytes "  retr      Restart the shell$^@"
-exec_statusM:  bytes "Executing command ...$^@"
 fre00_msg:     bytes " bytes free$^@"
 dir00_msg:     bytes "Drive ^@"
 dir01_msg:     bytes "$Contents of the drive:$  no shit make the driver first$^@"
@@ -870,6 +867,7 @@ locale_delim:  bytes ","
 ; GovnFS signatures
 com_file_sign: bytes $F2 "com/" $F2 $00
 com_file_full: reserve #96 bytes
+com_file_predef: bytes "kernel.bin^@"
 
 ; Control sequences
 bs_seq:        bytes "^H ^H^@"
