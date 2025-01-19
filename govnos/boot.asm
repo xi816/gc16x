@@ -262,11 +262,9 @@ memcpy:
 strcpy:
   lds *%ax
   ldg %bx
-  trap
   cmp %si $00 ; Target has no more bytes to copy
   re
   stgrb %si
-  trap
   inx %ax
   inx %bx
   jmp strcpy

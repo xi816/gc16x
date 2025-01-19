@@ -1254,9 +1254,11 @@ U8 Exec(GC gc, const U32 memsize, SDL_Renderer* renderer) {
   U8 st = false;
   while (!exc) {
     exc = (INSTS[gc.mem[gc.r.PC]])(&gc);
+    /*
     for (U16 i = 0xBCA; i < 0xBEA; i++)
       printf("%02X ", gc.mem[i]);
     putchar(10);
+    */
   }
   return exc;
 }
