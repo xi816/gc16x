@@ -17,11 +17,11 @@ reboot: jmp boot
 write:
   ldd $00
   sub %cx $01
-.loop:
+write_lp:
   push *%si
   int $02
   inx %si
-  loop .loop
+  loop write_lp
   ret
 
 ; puts - Output string until NUL ($00)
@@ -68,14 +68,14 @@ dstrtok:
 inttostr:
   ldg inttostr_buf
   add %gi $04
-.loop:
+inttostr_lp:
   div %ax #10 ; Divide and get the remainder into D
   add %dx #48 ; Convert to ASCII
   lds %gi
   storb %dx
   dex %gi
   cmp %ax $00
-  jmne .loop
+  jmne inttostr_lp
   ret
 inttostr_buf: reserve #5 bytes
 
@@ -83,10 +83,10 @@ inttostr_clr:
   ldc $4
   ldd $00
   lds inttostr_buf
-.loop:
+inttostr_clr_lp:
   storb %dx
   inx %si
-  loop .loop
+  loop inttostr_clr_lp
   ret
 
 ; inttostr - Convert a 16-bit integer into a string with delimiters
@@ -97,7 +97,7 @@ inttostrl:
   ldg inttostrl_buf
   ldc $00
   add %gi $05
-.loop:
+inttostrl_lp:
   inx %cx
   div %ax #10 ; Divide and get the remainder into D
   add %dx #48 ; Convert to ASCII
@@ -108,16 +108,16 @@ inttostrl:
   div %cx $03
   pop %cx
   cmp %dx $00
-  jme .putdelim
+  jme inttostrl_pd
   cmp %ax $00
-  jmne .loop
+  jmne inttostrl_lp
   ret
-.putdelim:    ; Put the delimiter
+inttostrl_pd: ; Put the delimiter
   lds %gi
   storb %bx
   dex %gi
   cmp %ax $00
-  jmne .loop
+  jmne inttostrl_lp
   ret
 inttostrl_buf: reserve #6 bytes ; the maximum value is 65,536 (6 bytes)
 
@@ -125,10 +125,10 @@ inttostrl_clr:
   ldc $5
   ldd $00
   lds inttostrl_buf
-.loop:
+inttostrl_clr_lp:
   storb %dx
   inx %si
-  loop .loop
+  loop inttostrl_clr_lp
   ret
 
 ; puti - Output a 16-bit integer number
@@ -166,16 +166,16 @@ strcmp:
   lodsb
   lodgb
   cmp %si %gi
-  jmne .fail
+  jmne strcmp_fail
   cmp %si $00
-  jme .eq
+  jme strcmp_eq
   inx %ax
   inx %bx
   jmp strcmp
-.eq:
+strcmp_eq:
   lda $00
   ret
-.fail:
+strcmp_fail:
   lda $01
   ret
 
@@ -190,16 +190,16 @@ pstrcmp:
   lds *%ax
   ldg *%bx
   cmp %si %gi
-  jmne .fail
+  jmne pstrcmp_fail
   cmp %si %cx
-  jme .eq
+  jme pstrcmp_eq
   inx %ax
   inx %bx
   jmp pstrcmp
-.eq:
+pstrcmp_eq:
   lda $00
   ret
-.fail:
+pstrcmp_fail:
   lda $01
   ret
 
@@ -213,16 +213,16 @@ dstrcmp:
   ldds
   ldb *%gi
   cmp %ax %bx
-  jmne .fail
+  jmne dstrcmp_fail
   cmp %gi $00
-  jme .eq
+  jme dstrcmp_eq
   inx %si
   inx %gi
   jmp strcmp
-.eq:
+dstrcmp_eq:
   lda $00
   ret
-.fail:
+dstrcmp_fail:
   lda $01
   ret
 
@@ -233,10 +233,10 @@ dstrcmp:
 ; A - status
 strnul:
   cmp *%ax $00
-  jme .nul
+  jme strnul_nul
   lda $01
   ret
-.nul:
+strnul_nul:
   lda $00
   ret
 
@@ -293,14 +293,14 @@ dstrsubset:
 ; A - number
 scani:
   lda $00
-.loop:
+scani_lp:
   int $01
   pop %bx
 
   cmp %bx '0' ; Check if less than '0'
-  jl .loop
+  jl scani_lp
   cmp %bx '9' ; Check if greater than '9'
-  jg .loop
+  jg scani_lp
 
   cmp %bx $0A ; Check for Enter
   re
@@ -313,7 +313,7 @@ scani:
   int $02
   sub %bx #48
   add %ax %bx
-  jmp .loop
+  jmp scani_lp
 
 ; scans - Scan a string from standard input
 ; S - buffer address 0040
@@ -322,9 +322,9 @@ scans:
   pop %dx
 
   cmp %dx $7F ; Check for Backspace
-  jme .backspace
+  jme scans_bs
   cmp %dx $08
-  jme .backspace
+  jme scans_bs
 
   push %dx    ; Output the character
   int $02
@@ -338,11 +338,11 @@ scans:
   cmp %dx $0A ; Return if pressed Enter
   re
   jmp scans
-.backspace: ; Handle backspace ($7F or $08)
+scans_bs: ; Handle backspace ($7F or $08)
   ldg *qptr
   cmp %gi $00
   jme scans
-.backspace_strict:
+scans_bs_strict:
   dex qptr
   push %si
   lds bs_seq
@@ -450,18 +450,18 @@ boot_start:
   ldd $00
   cpuid
   cmp %dx $00
-  jme .gc16x_cpu
-  jmp .unk_cpu
-.gc16x_cpu:
+  jme boot_gc16x_cpu
+  jmp boot_unk_cpu
+boot_gc16x_cpu:
   lds proc_00_msg
   call puts
-  jmp .shell
-.unk_cpu:
+  jmp boot_shell
+boot_unk_cpu:
   lds proc_unk_msg
   call puts
   lds kp_0_0msg
   jmp fail
-.shell:
+boot_shell:
   ; Show memory usage
   call fre
   ; Start the shell
@@ -485,18 +485,18 @@ com_govnos:
   ldb *drive_letter
   storb %bx
 
-  jmp .prompt
-.prompt: ; Print the prompt
+  jmp com_govnos_prompt
+com_govnos_prompt: ; Print the prompt
   lds env_PS
   call puts
-.input:
+com_govnos_input:
   lds cline
   call scans
-  jmp .process
-.term:
+  jmp com_govnos_process
+com_govnos_term:
   push $00
   int $00
-.process: ; Process the command
+com_govnos_process: ; Process the command
   ; ldd $00
   ; storb %dx
   lds cline
@@ -513,7 +513,7 @@ com_govnos:
   lda cline
   call strnul
   cmp %ax $00
-  jme com_govnos.aftexec
+  jme com_govnos_aftexec
 
   ; dir
   lda cline
@@ -606,8 +606,8 @@ com_govnos:
   ; Otherwise it's a bad instruction
   lds bad_inst_msg
   call puts
-.aftexec:
-  jmp .prompt
+com_govnos_aftexec:
+  jmp com_govnos_prompt
 
 ; Commands
 com_govnosEXEC_dir:
@@ -624,12 +624,12 @@ com_govnosEXEC_dir:
   call puts
   ; lds kp_1_1msg
   ; call fail
-  jmp com_govnos.aftexec ; Go to a new task after execution
+  jmp com_govnos_aftexec ; Go to a new task after execution
 
 com_govnosEXEC_cls:
   lds cls_seq
   call puts
-  jmp com_govnos.aftexec
+  jmp com_govnos_aftexec
 
 com_govnosEXEC_color:
   lds color00_msg
@@ -643,12 +643,12 @@ com_govnosEXEC_color:
   push 'm'  int $02
   push '$'  int $02
 
-  jmp com_govnos.aftexec
+  jmp com_govnos_aftexec
 
 com_govnosEXEC_help:
   lds help_msg
   call puts
-  jmp com_govnos.aftexec
+  jmp com_govnos_aftexec
 
 com_govnosEXEC_hlt:
   lds kp_6_0msg
@@ -669,11 +669,11 @@ com_govnosEXEC_driveCNN:
   lds drvCNN_msg01
   call puts
 
-  jmp com_govnos.aftexec
+  jmp com_govnos_aftexec
 com_govnosEXEC_driveDSC:
   lds drvDSC_msg
   call puts
-  jmp com_govnos.aftexec
+  jmp com_govnos_aftexec
 
 com_govnosEXEC_gsfetch:
   lds gsfc_stM
@@ -737,7 +737,7 @@ com_govnosEXEC_gsfetch_end:
 
   push $0A
   int $02
-  jmp com_govnos.aftexec
+  jmp com_govnos_aftexec
 
 com_govnosEXEC_echo:
   ; Progress to space
@@ -748,17 +748,17 @@ com_govnosEXEC_echo:
   call puts
   push $0A
   int $02
-  jmp com_govnos.aftexec
+  jmp com_govnos_aftexec
 
 com_govnosEXEC_info:
   lds OS_RELEASE
   call puts
-  jmp com_govnos.aftexec
+  jmp com_govnos_aftexec
 
 com_govnosEXEC_exit:
   lds exit_term_msg
   call puts
-  jmp com_govnos.term
+  jmp com_govnos_term
 
 com_govnosEXEC_reboot:
   lds cls_seq
@@ -779,10 +779,10 @@ fre:
   call puts
   ret
 
-com_govnos.shutdown:
+com_govnos_shutdown:
   lds exit_msg
   call puts
-com_govnos.term:
+com_govnos_term:
   push $00
   int $00
 

@@ -159,6 +159,12 @@ U8 PUSH1(GC* gc) {  // 0F 90
   return 0;
 }
 
+U8 PUSHp(GC* gc) {  // 0F 82
+  StackPush(gc, gc->mem[*ReadReg(gc, gc->mem[gc->r.PC+1])]);
+  gc->r.PC += 2;
+  return 0;
+}
+
 U8 INT(GC* gc, bool ri) {
   if (!((gc->r.PS & 0b01000000) >> 6)) return 0;
   U8 val;
@@ -590,6 +596,12 @@ U8 CMP10(GC* gc) {  // 10 EE
   return 0;      // immediate are equal
 }
 
+U8 LDRp(GC* gc) {   // 11-20 -- Load register to *reg16
+  *ReadReg(gc, gc->mem[gc->r.PC]-0x11) = gc->mem[gc->r.PC+1];
+  gc->r.PC += 2;
+  return 0;
+}
+
 U8 RC(GC* gc) {   // 23 - Return if carry set
   if (gc->r.PS & 0b00000001) gc->r.PC = StackPop(gc);
   else gc->r.PC++;
@@ -1010,6 +1022,14 @@ U8 LDBP1(GC* gc) {   // 66 AC
   return 0;
 }
 
+U8 CMPpi(GC* gc) {   // 69 -- Compare *reg16 and imm16
+  // 69 [00] [40 00]
+  if (gc->mem[*ReadReg(gc, gc->mem[gc->r.PC+1])] == ReadWord(*gc, gc->r.PC+2)) gc->r.PS |= 0b00000100;
+  else gc->r.PS &= 0b11111011;
+  gc->r.PC += 4;
+  return 0;
+}
+
 U8 BHCl(GC* gc) {   // 83 00 - 83 07
   *ReadReg(gc, gc->mem[gc->r.PC]) &= 0b0000000011111111;
   gc->r.PC++;
@@ -1057,7 +1077,7 @@ U8 INXM(GC* gc) {   // B0
 }
 
 U8 STRb(GC* gc) {   // B1 -- Store byte into [%s] and increment %s
-  gc->mem[gc->r.S++] = gc->mem[gc->r.PC+1];
+  gc->mem[gc->r.SI++] = gc->mem[gc->r.PC+1];
   gc->r.PC += 2;
   return 0;
 }
@@ -1109,12 +1129,12 @@ U8 PG83(GC*); // Page 83 - Load/Store byte operations
 // Zero page instructions
 U8 (*INSTS[256])() = {
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &PG0F ,
-  &PG10 , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
-  &UNK  , &UNK  , &UNK  , &RC   , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &RE   , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &PG10 , &LDRp , &LDRp , &LDRp , &LDRp , &LDRp , &LDRp , &LDRp , &LDRp , &LDRp , &LDRp , &LDRp , &LDRp , &LDRp , &LDRp , &LDRp ,
+  &LDRp , &UNK  , &UNK  , &RC   , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &RE   , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &RET  , &STI  , &UNK  , &CLC  , &UNK  , &UNK  , &UNK  , &UNK  , &RNE  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &LDA0 , &LDB0 , &LDC0 , &LDD0 , &LDS0 , &LDG0 , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &HLT  , &CLI  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
-  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &PG66 , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &PG66 , &UNK  , &UNK  , &CMPpi, &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &LDA1 , &LDB1 , &LDC1 , &LDD1 , &LDS1 , &LDG1 , &LDSP1, &LDBP1, &UNK  ,
   &UNK  , &UNK  , &UNK  , &PG83 , &UNK  , &UNK  , &UNK  , &UNK  , &XCHG4, &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &DEXM , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
@@ -1135,7 +1155,7 @@ U8 (*INSTS_PG0F[256])() = {
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
-  &POP1 , &UNK  , &UNK  , &UNK  , &PUSH0, &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &POP1 , &UNK  , &PUSHp, &UNK  , &PUSH0, &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &PUSH1, &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &TRAP , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
