@@ -11,8 +11,8 @@ For only compiling CGovnOS-GC16X you can use the `./build` script. (`kasm` assem
 Now you can start writing assembly code. For example, create a file called `test.asm`:
 ```asm
 main:
-  push 50h
-  int 00h
+  push $50
+  int $00
 ```
 and compile it with `kasm`: `./kasm test.asm test.bin`.
 
