@@ -84,9 +84,19 @@ U8 main(I32 argc, I8** argv) {
   gc.renderer = renderer;
   GGinit(&(gc.gg), renderer);
 
-  U8 ExecExit = Exec(gc, MEMSIZE, renderer);
+  U8 ExecExit = Exec(&gc, MEMSIZE);
   if (ExecExit) {
     old_st;
+    if (driveboot) { // Save the modified disk back
+      FILE* fl = fopen(argv[2], "wb");
+      if (fl == NULL) {
+        fprintf(stderr, "\033[31mError\033[0m while opening %s\n", argv[2]);
+        old_st;
+        return 1;
+      }
+      fwrite(gc.rom, 1, 65536, fl);
+      fclose(fl);
+    }
     return ExecExit;
   }
 

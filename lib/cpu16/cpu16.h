@@ -24,7 +24,7 @@ struct gcregs {
   gcword IX;  // X index                  $0E
   gcword IY;  // Y index                  $0F
 
-  gcbyte PS;  // -I---E-C                 Unaddressable
+  gcbyte PS;  // -I---ZNC                 Unaddressable
   gcword PC;  // Program counter          Unaddressable
 };
 struct gcrc {
@@ -52,6 +52,8 @@ struct GC16X {
   SDL_Renderer* renderer;
 };
 typedef struct GC16X GC;
+
+U8 errno;
 
 U0 PageDump(GC gc, U8 page);
 U0 StackDump(GC gc, U16 c);
@@ -99,30 +101,30 @@ gcrc_t ReadRegClust(U8 clust) { // Read a register cluster
 }
 
 U8 UNK(GC* gc) {    // Unknown instruction
-  fprintf(stderr, "Illegal instruction %02X\nAt position %04X\n", gc->mem[gc->r.PC], gc->r.PC);
+  if (gc->mem[gc->r.PC-1] == 0x0F) {  
+    fprintf(stderr, "From page \033[33m0F\033[0m\n");
+  }
+  fprintf(stderr, "\033[31mIllegal\033[0m instruction \033[33m%02X\033[0m\nAt position %04X\n", gc->mem[gc->r.PC], gc->r.PC);
   old_st_legacy;
-  return 0;
+  errno = 1;
+  return 1;
 }
 
 U8 JME0(GC* gc) {   // 0F 29
-  if (gc->r.PS & 0b00000100) {
-    gc->r.PC = ReadWord(*gc, gc->r.PC+1);
-    gc->r.PS &= 0b11111011;
-  }
-  else {
-    gc->r.PC += 3;
-  }
+  if (gc->r.PS & 0b00000100) { gc->r.PC = ReadWord(*gc, gc->r.PC+1); gc->r.PS &= 0b11111011; }
+  else { gc->r.PC += 3; }
   return 0;
 }
 
 U8 JMNE0(GC* gc) {   // 0F 2A
-  if (!((gc->r.PS & 0b00000100) >> 2)) {
-    gc->r.PC = ReadWord(*gc, gc->r.PC+1);
-    gc->r.PS &= 0b11111011;
-  }
-  else {
-    gc->r.PC += 3;
-  }
+  if (!((gc->r.PS & 0b00000100) >> 2)) { gc->r.PC = ReadWord(*gc, gc->r.PC+1); gc->r.PS &= 0b11111011; }
+  else { gc->r.PC += 3; }
+  return 0;
+}
+
+U8 JL0(GC* gc) {   // 0F BB
+  if (!(gc->r.PS & 0b00000010)) { gc->r.PC = ReadWord(*gc, gc->r.PC+1); gc->r.PS &= 0b11111101; }
+  else { gc->r.PC += 3; }
   return 0;
 }
 
@@ -166,7 +168,10 @@ U8 PUSHp(GC* gc) {  // 0F 82
 }
 
 U8 INT(GC* gc, bool ri) {
-  if (!((gc->r.PS & 0b01000000) >> 6)) return 0;
+  if (!((gc->r.PS & 0b01000000) >> 6)) {
+    gc->r.PC += 2;
+    return 0;
+  }
   U8 val;
   if (ri) {
     val = *ReadReg(gc, ReadByte(*gc, gc->r.PC+1));
@@ -177,7 +182,8 @@ U8 INT(GC* gc, bool ri) {
   switch (val) {
     case INT_EXIT: {
       old_st_legacy;
-      exit(StackPop(gc));
+      errno = StackPop(gc);
+      return 1;
     }
     case INT_READ: {
       StackPush(gc, getchar());
@@ -485,13 +491,13 @@ U8 LDDG(GC* gc) {  // 10 9B
 
 U8 STDS(GC* gc) {  // 10 AB
   gc->rom[gc->r.SI] = *ReadReg(gc, gc->r.PC+1);
-  gc->r.PC++;
+  gc->r.PC += 2;
   return 0;
 }
 
 U8 STDG(GC* gc) {  // 10 BB
   gc->rom[gc->r.GI] = *ReadReg(gc, gc->r.PC+1);
-  gc->r.PC++;
+  gc->r.PC += 2;
   return 0;
 }
 
@@ -585,6 +591,8 @@ U8 CMP11(GC* gc) {  // 10 F6
   gcrc_t rc = ReadRegClust(gc->mem[gc->r.PC+1]);
   if (*ReadReg(gc, rc.x) == *ReadReg(gc, rc.y)) gc->r.PS |= 0b00000100;
   else gc->r.PS &= 0b11111011;
+  if ((I16)(*ReadReg(gc, rc.x) - *ReadReg(gc, rc.y)) < 0) gc->r.PS |= 0b00000010;
+  else gc->r.PS &= 0b11111101;
   gc->r.PC += 2; // Set equal flag if two register values
   return 0;      // are equal
 }
@@ -592,6 +600,8 @@ U8 CMP11(GC* gc) {  // 10 F6
 U8 CMP10(GC* gc) {  // 10 EE
   if ((*ReadReg(gc, gc->mem[gc->r.PC+1]) == ReadWord(*gc, gc->r.PC+2))) gc->r.PS |= 0b00000100;
   else gc->r.PS &= 0b11111011;
+  if (((I16)(*ReadReg(gc, gc->mem[gc->r.PC+1]) - ReadWord(*gc, gc->r.PC+2)) < 0)) gc->r.PS |= 0b00000010;
+  else gc->r.PS &= 0b11111101;
   gc->r.PC += 4; // Set equal flag if a register and
   return 0;      // immediate are equal
 }
@@ -1026,6 +1036,8 @@ U8 CMPpi(GC* gc) {   // 69 -- Compare *reg16 and imm16
   // 69 [00] [40 00]
   if (gc->mem[*ReadReg(gc, gc->mem[gc->r.PC+1])] == ReadWord(*gc, gc->r.PC+2)) gc->r.PS |= 0b00000100;
   else gc->r.PS &= 0b11111011;
+  if (((I16)(gc->mem[*ReadReg(gc, gc->mem[gc->r.PC+1])] - ReadWord(*gc, gc->r.PC+2)) < 0)) gc->r.PS |= 0b00000010;
+  else gc->r.PS &= 0b11111101;
   gc->r.PC += 4;
   return 0;
 }
@@ -1249,17 +1261,12 @@ U0 RegDump(GC gc) {
   printf("\033[10C   -I---Z-C\033[0m\n");
 }
 
-U8 Exec(GC gc, const U32 memsize, SDL_Renderer* renderer) {
+U8 Exec(GC* gc, const U32 memsize) {
   U8 exc = 0;
-  U8 st = false;
-  while (!exc) {
-    exc = (INSTS[gc.mem[gc.r.PC]])(&gc);
-    /*
-    for (U16 i = 0xBCA; i < 0xBEA; i++)
-      printf("%02X ", gc.mem[i]);
-    putchar(10);
-    */
-  }
+  execloop:
+    exc = (INSTS[gc->mem[gc->r.PC]])(gc);
+    if (exc != 0) exit(errno);
+    goto execloop;
   return exc;
 }
 

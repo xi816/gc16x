@@ -34,7 +34,7 @@ DIGEXT = "0123456789ABCDEF";
 KEY2   = [
   "lda", "ldb", "ldc", "ldd", "lds", "ldg", "push", "int", "lodsb", "lodgb", "cmp", "inx", "dex", "jme", "jmne", "ret", "jmp",
   "call", "nop", "loop", "cop", "storb", "stgrb", "cpuid", "hlt", "pop", "add", "sub", "div", "brk", "ldds", "re", "rne", "mul",
-  "trap", "jl", "jle", "jg", "jge", "str"
+  "trap", "jl", "jle", "jg", "jge", "str", "mov"
 ];
 KEYR   = [
   "ax", "bx", "cx", "dx", "si", "gi", "sp", "bp",
@@ -70,7 +70,7 @@ def Lex(prog: str):
       toks.append((T_EOL,));
       toks.append((T_EOF,));
       return toks, 0;
-    elif (prog[pos] == ";"):
+    elif (prog[pos] in ";,"):
       pos += 1;
       while (prog[pos] != "\n"):
         pos += 1;
@@ -78,7 +78,6 @@ def Lex(prog: str):
       pos += 1;
       while (prog[pos] != "\n"):
         pos += 1;
-      pos += 2;
     elif ((prog[pos] == "/") and (prog[pos+1] == "*")):
       pos += 1;
       while ((prog[pos] != "*") or (prog[pos+1] != "/")):
@@ -116,8 +115,7 @@ def Lex(prog: str):
         print(f"\033[33m  Note:\033[0m at position {pos}");
         return 1;
       buf = "";
-    elif (prog[pos] in "#"):
-      pos += 1;
+    elif (prog[pos] in DIG):
       while (prog[pos] in DIG):
         buf += prog[pos];
         pos += 1;
@@ -248,7 +246,31 @@ def Parse(toks: list) -> list:
   pc:     int  = 0;
   while (toks[pos][0] != T_EOF):
     if (toks[pos][0] == T_INS): # Parse instruction
-      if (toks[pos][1] == "lda"): # LDA
+      if (toks[pos][1] == "mov"): # MOV
+        if (toks[pos+2][0] == T_INT): # MOV reg16 imm16
+          ast.append([ASTINS, "mov:a", (toks[pos+1][1], toks[pos+2][1]), pc]);
+          pc += 3; # 40 00 00
+          pos += 3;
+        elif (toks[pos+2][0] == T_REG): # MOV reg16 reg16
+          ast.append([ASTINS, "mov:r", (toks[pos+1][1], toks[pos+2][1]), pc]);
+          pc += 2; # 66 A5 00
+          pos += 3;
+        elif (toks[pos+2][0] == T_0ID): # MOV m16(label)
+          ast.append([ASTINS, "mov:l", (toks[pos+1][1], toks[pos+2][1]), pc]);
+          pc += 3; # 40 71 05
+          pos += 3;
+        elif (toks[pos+2][0] == T_IDD): # MOV *m16(label)
+          ast.append([ASTINS, "mov:b", (toks[pos+1][1], toks[pos+2][1]), pc]);
+          pc += 4;
+          pos += 3;
+        elif (toks[pos+2][0] == T_DREG): # MOV *reg16 m16(label)
+          ast.append([ASTINS, "mov:R", (toks[pos+1][1], toks[pos+2][1]), pc]);
+          pc += 2;
+          pos += 3;
+        else:
+          print("Unknown lda operand");
+          exit(1);
+      elif (toks[pos][1] == "lda"): # LDA
         if (toks[pos+1][0] == T_INT): # LDA immediate
           ast.append([ASTINS, "lda:a", toks[pos+1][1], pc]);
           pc += 3; # 40 00 00
@@ -703,7 +725,33 @@ def CompileGC16X(prog: list, labs: dict):
   pos = 0;
   while (prog[pos][0] != ASTEOF):
     if (prog[pos][0] == ASTINS):
-      if (prog[pos][1] == "lda:a"): # LDA immediate
+      if (prog[pos][1] == "mov:a"): # MOV reg16 imm16
+        code.append(0x40+prog[pos][2][0]);
+        code.append(prog[pos][2][1] % 256);
+        code.append(prog[pos][2][1] >> 8);
+        pos += 1;
+      elif (prog[pos][1] == "mov:r"): # MOV reg16 reg16
+        code.append(0x77+prog[pos][2][0]);
+        code.append(prog[pos][2][1]);
+        pos += 1;
+      elif (prog[pos][1] == "mov:R"): # MOV reg16 *reg16
+        code.append(0x11+prog[pos][2][0]);
+        code.append(prog[pos][2][1]);
+        pos += 1;
+      elif (prog[pos][1] == "mov:l"): # MOV reg16 m16(label)
+        code.append(0x40+prog[pos][2][0]);
+        val = labs[prog[pos][2][1]];
+        code.append(val % 256);
+        code.append(val >> 8);
+        pos += 1;
+      elif (prog[pos][1] == "mov:b"): # MOV reg16 *m16
+        code.append(0x66);
+        code.append(0x55+prog[pos][2][0]);
+        val = labs[prog[pos][2][1]];
+        code.append(val % 256);
+        code.append(val >> 8);
+        pos += 1;
+      elif (prog[pos][1] == "lda:a"): # LDA immediate
         code.append(0x40);
         code.append(prog[pos][2] % 256);
         code.append(prog[pos][2] >> 8);

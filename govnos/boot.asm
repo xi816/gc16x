@@ -41,10 +41,9 @@ puts:
 ; B - end character
 ; (also affects dynptr)
 strtok:
-  add %si $01
+  inx %si
   ldc *%si
   sub %cx %bx
-  ldd $00
   loop strtok
   ret
 
@@ -54,11 +53,10 @@ strtok:
 ; B - end character
 ; (also affects dynptr)
 dstrtok:
-  add %si $01
   ldds
+  inx %si
   ldc %ax
   sub %cx %bx
-  ldd $00
   loop strtok
   ret
 
@@ -260,7 +258,8 @@ memcpy:
 ; A - Target
 ; B - Destination
 strcpy:
-  lds *%ax
+  lds %ax
+  lodsb
   ldg %bx
   cmp %si $00 ; Target has no more bytes to copy
   re
@@ -277,9 +276,11 @@ strcpy:
 dstrsubset:
   lda *%gi
   call dstrtok ; Load si with the address to the first character (stored in ax)
+  push %si
   push %gi
   call dstrcmp
   pop %gi
+  pop %si
 
   cmp %ax $00 ; We found the substring (address in si)
   re
@@ -407,20 +408,17 @@ drive_letter:    reserve #1 bytes
 ; S - address to store data from a file
 gfs_read_file:
   lds com_file_full
-  str $F1
+  str $F1 ; Load $F1 into com_file_full[0]
   lda com_file_predef
   ldb %si
+  call strcpy ; Load filename into com_file_full
+  lda com_file_sign ; Load file signature into com_file_full
   call strcpy
-  lds %ax
-  ldg %bx
 
-  ldb com_file_sign
-  call strcpy
-  lds %ax
-  ldg %bx
   lda $0020
   ldb com_file_full
   call dstrsubset
+
   lds com_file_full
   ldg $3000              ; load the file into $3000
   ; call flcpy (s -> src{disk}, g -> dst{mem})
