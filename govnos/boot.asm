@@ -347,7 +347,7 @@ scans:
   pop %si
   jmp scans
 
-; gfs_read_signature _ Read the signature of the
+; gfs_read_signature - Read the signature of the
 ; drive (GovnFS filesystem)
 ; Returns:
 ; magic_byte: magic byte

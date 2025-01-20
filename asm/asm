@@ -74,6 +74,16 @@ def Lex(prog: str):
       pos += 1;
       while (prog[pos] != "\n"):
         pos += 1;
+    elif ((prog[pos] == "/") and (prog[pos+1] == "/")):
+      pos += 1;
+      while (prog[pos] != "\n"):
+        pos += 1;
+      pos += 2;
+    elif ((prog[pos] == "/") and (prog[pos+1] == "*")):
+      pos += 1;
+      while ((prog[pos] != "*") or (prog[pos+1] != "/")):
+        pos += 1;
+      pos += 2;
     elif (prog[pos] in WHI):
       pos += 1;
     elif (prog[pos] == "\n"):
@@ -217,7 +227,7 @@ def Lex(prog: str):
       print(f"\033[33m  Note:\033[0m at position {hex(pos)[2:]:0>4}h");
       print(f"\033[33m  Note:\033[0m at position {pos}");
       print(f"\033[33m  Note:\033[0m `{prog[pos]}`");
-      return [], 1;
+      exit(1);
   return [], 1;
 
 def FetchLabels(prog: list, disk: bool):
@@ -1114,12 +1124,12 @@ def main(argc: int, argv: list) -> int:
     src = fl.read();
   src = RemEmpty(src)+"\0";
   tokens, exitcode = Lex(src);
-  if (type(tokens[1]) == int):
+  if (type(tokens[1]) is int):
     print("Fatal error. Can't compile");
     exit(tokens);
-  PrintTokens(tokens);
+  # PrintTokens(tokens);
   ast, labs = Parse(tokens);
-  PrintAst(ast);
+  # PrintAst(ast);
   PrintLabs(labs);
   c, exitcode = CompileGC16X(ast, labs);
   with open(outname, "wb") as fl:
