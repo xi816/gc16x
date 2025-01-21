@@ -660,43 +660,43 @@ U8 CLI(GC* gc) {   // 52
   return 0;
 }
 
-U8 LDA0(GC* gc) {   // 66 05
+U8 LDA0(GC* gc) {   // 40 -- LDA imm16
   gc->r.AX = ReadWord(*gc, gc->r.PC+1);
   gc->r.PC += 3;
   return 0;
 }
 
-U8 LDB0(GC* gc) {   // 66 06
+U8 LDB0(GC* gc) {   // 41 -- LDB imm16
   gc->r.BX = ReadWord(*gc, gc->r.PC+1);
   gc->r.PC += 3;
   return 0;
 }
 
-U8 LDC0(GC* gc) {   // 66 07
+U8 LDC0(GC* gc) {   // 42 -- LDC imm16
   gc->r.CX = ReadWord(*gc, gc->r.PC+1);
   gc->r.PC += 3;
   return 0;
 }
 
-U8 LDD0(GC* gc) {   // 66 08
+U8 LDD0(GC* gc) {   // 43 -- LDD imm16
   gc->r.DX = ReadWord(*gc, gc->r.PC+1);
   gc->r.PC += 3;
   return 0;
 }
 
-U8 LDS0(GC* gc) {   // 66 09
+U8 LDS0(GC* gc) {   // 44 -- LDS imm16
   gc->r.SI = ReadWord(*gc, gc->r.PC+1);
   gc->r.PC += 3;
   return 0;
 }
 
-U8 LDG0(GC* gc) {   // 66 0A
+U8 LDG0(GC* gc) {   // 45 -- LDG imm16
   gc->r.GI = ReadWord(*gc, gc->r.PC+1);
   gc->r.PC += 3;
   return 0;
 }
 
-U8 LDAZ(GC* gc) {   // 66 15 -- LDA Zero Page
+U8 LDAZ(GC* gc) {   // -- LDA mz8
   gc->r.AX = gc->mem[gc->mem[gc->r.PC+1]];
   gc->r.PC += 2;
   return 0;

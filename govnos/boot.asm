@@ -67,15 +67,15 @@ inttostr:
   ldg inttostr_buf
   add %gi $04
 .loop:
-  div %ax #10 ; Divide and get the remainder into D
-  add %dx #48 ; Convert to ASCII
+  div %ax 10 ; Divide and get the remainder into D
+  add %dx 48 ; Convert to ASCII
   lds %gi
   storb %dx
   dex %gi
   cmp %ax $00
   jmne .loop
   ret
-inttostr_buf: reserve #5 bytes
+inttostr_buf: reserve 5 bytes
 
 inttostr_clr:
   ldc $4
@@ -97,8 +97,8 @@ inttostrl:
   add %gi $05
 .loop:
   inx %cx
-  div %ax #10 ; Divide and get the remainder into D
-  add %dx #48 ; Convert to ASCII
+  div %ax 10 ; Divide and get the remainder into D
+  add %dx 48 ; Convert to ASCII
   lds %gi
   storb %dx
   dex %gi
@@ -117,7 +117,7 @@ inttostrl:
   cmp %ax $00
   jmne .loop
   ret
-inttostrl_buf: reserve #6 bytes ; the maximum value is 65,536 (6 bytes)
+inttostrl_buf: reserve 6 bytes ; the maximum value is 65,536 (6 bytes)
 
 inttostrl_clr:
   ldc $5
@@ -306,10 +306,10 @@ scani:
   re
   cmp %bx $00 ; Check for NUL ($00)
   re
-  mul %ax #10
+  mul %ax 10
   push %bx
   int $02
-  sub %bx #48
+  sub %bx 48
   add %ax %bx
   jmp .loop
 
@@ -396,10 +396,10 @@ gfs_read_signature:
 
   lda %cx
   ret
-gfs_sign_sernum: reserve #4 bytes
-magic_byte:      reserve #1 bytes
-disk_size:       reserve #1 bytes
-drive_letter:    reserve #1 bytes
+gfs_sign_sernum: reserve 4 bytes
+magic_byte:      reserve 1 bytes
+disk_size:       reserve 1 bytes
+drive_letter:    reserve 1 bytes
 
 ; gfs_read_file - Read the file in the drive (GovnFS filesystem) and
 ; copy the file contents into an address
@@ -706,9 +706,9 @@ com_govnosEXEC_gsfetch_end:
   sub %dx %bx
   add %dx $02
   lda %dx
-  div %ax #1024
+  div %ax 1024
   inx %ax ; maybe
-  ldb #64
+  ldb 64
   sub %bx %ax
   lda %bx
   call puti
@@ -720,7 +720,7 @@ com_govnosEXEC_gsfetch_end:
   cpuid ; Get memory size
   lda %dx
   dex %ax ; in case of 65,536 being 0
-  div %ax #1024
+  div %ax 1024
   inx %ax ; maybe
   call puti
 
@@ -785,7 +785,11 @@ com_govnos.term:
 st_msg:        bytes "Loading GovnOS ...$^@"
 exit_msg:      bytes "$Shutting down ...$^@"
 exit_term_msg: bytes "exit$^@"
-welcome_msg:   bytes "Welcome to GovnOS!$To get help, type `help`$$^@"
+welcome_msg:   bytes "GovnOS 0.0.3$"
+	             bytes "----------------------------$"
+	             bytes "To get help, type 'help'$"
+	             bytes "To get OS release info, type 'info'$"
+	             bytes "----------------------------$$^@"
 bschk:         bytes "Backspace$^@"
 dir_00msg:     bytes "^[[91mdir is not fully implemented^[[0m$^@"
 help_msg:      bytes "GovnOS Help manual page 1/1$"
@@ -855,14 +859,14 @@ OS_RELEASE:    bytes "^[[96mGovnOS version 0.0.2 (alpha)$"
                bytes "^[[0m$^@"
 
 ; Data
-errno:         reserve #1 bytes
-dynptr:        reserve #1 bytes
+errno:         reserve 1 bytes
+dynptr:        reserve 1 bytes
 
 locale_delim:  bytes ","
 
 ; GovnFS signatures
 com_file_sign: bytes $F2 "com/" $F2 $00
-com_file_full: reserve #96 bytes
+com_file_full: reserve 96 bytes
 com_file_predef: bytes "kernel.bin^@"
 
 ; Control sequences
@@ -886,8 +890,8 @@ instFULL_echo: bytes "echo "
 bad_inst_msg:  bytes "Bad command.$^@"
 
 ; Buffers
-cline:          reserve #64 bytes
-qptr:           reserve #1 bytes
+cline:         reserve 64 bytes
+qptr:          reserve 1 bytes
 
 bootsecend:    bytes $AA $55
 
