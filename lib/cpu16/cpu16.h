@@ -92,7 +92,7 @@ gcword* ReadReg(GC* gc, U8 regid) {
     &(gc->AX.word), &(gc->BX.word), &(gc->CX.word), &(gc->DX.word), // 00-03
     &(gc->SI.word), &(gc->GI.word), &(gc->SP.word), &(gc->BP.word), // 04-07
     &(gc->EX.word), &(gc->FX.word), &(gc->HX.word), &(gc->LX.word), // 08-0B
-    &(gc->X.word),  &(gc->Y.word),  &(gc->IX.word), &(gc->IY.word), // 0C-0F
+    &(gc->X.word),  &(gc->Y.word),  &(gc->IX.word), &(gc->IY.word)  // 0C-0F
   };
   return regids[regid];
 }
@@ -151,7 +151,14 @@ U8 JL0(GC* gc) {
   return 0;
 }
 
-// 0F BB -- Jump to imm16 address unconditionally
+// 0F CB -- Jump to imm16 address if negative flag set
+U8 JG0(GC* gc) {
+  if (gc->PS & 0b00000010) { gc->PC.word = ReadWord(*gc, gc->PC.word+1); gc->PS &= 0b11111101; }
+  else { gc->PC.word += 3; }
+  return 0;
+}
+
+// 0F 30 -- Jump to imm16 address unconditionally
 U8 JMP0(GC* gc) {
   gc->PC.word = ReadWord(*gc, gc->PC.word+1);
   return 0;
@@ -1206,8 +1213,8 @@ U8 (*INSTS_PG0F[256])() = {
   &POP1 , &UNK  , &PUSHp, &UNK  , &PUSH0, &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &PUSH1, &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &TRAP , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
-  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
-  &UNK  , &UNK  , &INT0 , &INT1 , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &JL0  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &UNK  , &UNK  , &INT0 , &INT1 , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &JG0  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &CPUID, &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK
@@ -1307,7 +1314,7 @@ U0 RegDump(GC gc) {
   printf("\033[10CBP %04X\n",           gc.BP);
   printf("\033[10CPC %04X\n",           gc.PC);
   printf("\033[10CPS %08b\n",           gc.PS);
-  printf("\033[10C   -I---Z-C\033[0m\n");
+  printf("\033[10C   -I---ZNC\033[0m\n");
 }
 
 U8 Exec(GC* gc, const U32 memsize) {
