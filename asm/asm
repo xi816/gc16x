@@ -129,7 +129,7 @@ def Lex(prog: str):
           buf += "\n";
         elif ((prog[pos] == "\\") and (prog[pos+1] == "\"")):
           buf += "\"";
-          pos += 2;
+          pos += 1;
         elif (prog[pos] == "^"):
           if (ord(prog[pos+1]) in range(64, 97)):
             buf += chr(ord(prog[pos+1])-64);

@@ -6,4 +6,3 @@ U0 GC_REBOOT(GC* gc) {
 
   return 0;
 }
-

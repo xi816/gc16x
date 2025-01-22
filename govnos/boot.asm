@@ -425,7 +425,7 @@ gfs_read_file:
   ret
 
 ; flcpy - Copy the file contents into memory (assuming
-;   %si is already loaded with the disk address to the file)
+; %si is already loaded with the disk address to the file)
 ; Arguments:
 ; S - file contents disk address
 ; G
@@ -450,12 +450,19 @@ boot_start:
 .gc16x_cpu:
   lds proc_00_msg
   call puts
+  ldd $01
+  cpuid
+  cmp %dx $01
+  jmne .livecd_warn
   jmp .shell
 .unk_cpu:
   lds proc_unk_msg
   call puts
   lds kp_0_0msg
   jmp fail
+.livecd_warn:
+  lds livecd_msg
+  call puts
 .shell:
   ; Show memory usage
   call fre
@@ -785,11 +792,11 @@ com_govnos.term:
 st_msg:        bytes "Loading GovnOS ...$^@"
 exit_msg:      bytes "$Shutting down ...$^@"
 exit_term_msg: bytes "exit$^@"
-welcome_msg:   bytes "GovnOS 0.0.3$"
-	             bytes "----------------------------$"
+welcome_msg:   bytes "GovnOS 0.0.3$$"
 	             bytes "To get help, type 'help'$"
-	             bytes "To get OS release info, type 'info'$"
-	             bytes "----------------------------$$^@"
+	             bytes "To get OS release info, type 'info'$$^@"
+livecd_msg:    bytes "^[[91mLoaded from \"Live Floppy\" image$"
+               bytes "Some commands using the GovnFS driver might not work^[[0m$^@"
 bschk:         bytes "Backspace$^@"
 dir_00msg:     bytes "^[[91mdir is not fully implemented^[[0m$^@"
 help_msg:      bytes "GovnOS Help manual page 1/1$"
