@@ -1,6 +1,6 @@
 #!/usr/bin/bash
 print_state() {
-  printf "building $1\n"
+  printf "building \e[93m$1\e[0m\n"
 }
 completed_state() {
   printf "Compilation finished\n"
@@ -12,9 +12,11 @@ build_state() {
   cd - > /dev/null
 }
 
-build_state "CGovnOS"     "./"
+build_state "gc16"        "./"
 build_state "gasman"      "core/gasman/"
 build_state "gboot"       "core/gboot/"
 build_state "ugovnfs"     "core/ugovnfs/"
+build_state "GovnOS"      "govnos/"
+echo
 completed_state
 

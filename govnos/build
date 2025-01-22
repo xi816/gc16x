@@ -1,0 +1,10 @@
+#!/usr/bin/bash
+
+build() {
+  echo -e "compiling \e[96mboot.asm\e[0m"
+  cd ../
+  ./kasm govnos/boot.asm govnos/boot.bin > /dev/null
+  cd - > /dev/null
+}
+
+build;
