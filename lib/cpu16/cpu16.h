@@ -532,7 +532,7 @@ U8 LDDG(GC* gc) {  // 10 9B
 }
 
 U8 STDS(GC* gc) {  // 10 AB
-  gc->rom[gc->SI.word] = *ReadReg(gc, gc->PC.word+1);
+  gc->rom[gc->SI.word] = *ReadReg(gc, gc->mem[gc->PC.word+1]);
   gc->PC.word += 2;
   return 0;
 }
@@ -1338,7 +1338,7 @@ U8 Exec(GC* gc, const U32 memsize) {
   U8 exc = 0;
   execloop:
     exc = (INSTS[gc->mem[gc->PC.word]])(gc);
-    if (exc != 0) exit(errno);
+    if (exc != 0) return errno;
     goto execloop;
   return exc;
 }

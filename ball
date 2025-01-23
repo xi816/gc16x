@@ -1,6 +1,6 @@
 #!/usr/bin/bash
 print_state() {
-  printf "building \e[93m$1\e[0m\n"
+  printf "building $1\n"
 }
 completed_state() {
   printf "Compilation finished\n"
