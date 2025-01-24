@@ -185,8 +185,10 @@ strcmp:
 ; Returns:
 ; A - status
 pstrcmp:
-  lds *%ax
-  ldg *%bx
+  lds %ax
+  ldg %bx
+  lodsb
+  lodgb
   cmp %si %gi
   jmne .fail
   cmp %si %cx
@@ -792,7 +794,7 @@ com_govnos.term:
 st_msg:        bytes "Loading GovnOS ...$^@"
 exit_msg:      bytes "$Shutting down ...$^@"
 exit_term_msg: bytes "exit$^@"
-welcome_msg:   bytes "GovnOS 0.0.3$$"
+welcome_msg:   bytes "^[[92mGovnOS 0.0.3^[[0m$$"
 	             bytes "To get help, type 'help'$"
 	             bytes "To get OS release info, type 'info'$$^@"
 livecd_msg:    bytes "^[[91mLoaded from \"Live Floppy\" image$"
@@ -831,9 +833,9 @@ gsfc_backM:    bytes "^[[6A^[[33m  .     . .$"
                bytes            " (========)^[[0m$$^@"
 
 ; Kernel panic
-; 0 _ Processor error
-; 1 _ Disk/Filesystem error
-; 41 _ Unknown error
+; 0    Processor error
+; 1    Disk/Filesystem error
+; 41   Unknown error
 kp_0_0msg:     bytes "Kernel panic: Unable to find processor type(0,0)$^@"
 kp_1_0msg:     bytes "Kernel panic: Unknown filesystem(1,0)$^@"
 kp_1_1msg:     bytes "Kernel panic: Could not read disk(1,1)$^@"
@@ -842,8 +844,8 @@ kp_41_0msg:    bytes "Kernel panic: Kernel error(41,0)$^@"
 
 ; CPU types
 procchk_msg:   bytes "Checking CPU ...$^@"
-proc_00_msg:   bytes "CPU: Govno Core 16X$$^@"
-proc_unk_msg:  bytes "CPU: Unknown$$^@"
+proc_00_msg:   bytes "CPU: ^[[32mGovno Core 16X^[[0m$$^@"
+proc_unk_msg:  bytes "CPU: ^[[31mUnknown^[[0m$$^@"
 proc_00M:      bytes "Govno Core 16X$^@"
 proc_unkM:     bytes "Unknown :($^@"
 
