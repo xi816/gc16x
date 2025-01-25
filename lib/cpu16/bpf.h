@@ -1,8 +1,28 @@
 // Basic processor functions
+struct govnodate {
+  short year;
+  char  month;
+  char  day;
+};
+typedef struct govnodate govnodate;
 
-U0 GC_REBOOT(GC* gc) {
-  gc->r.PC = 0x0000; // Reset the program counter
-  gc->r.PS = 0b01000000; // Reset flags (but enable interrupts)
+govnodate govnodate_convert(unsigned short date) {
+  return (govnodate){
+    .year = date / 372 + 1970,
+    .month = (date % 372) / 31 + 1,
+    .day = (date % 372) % 31 + 1
+  };
+}
 
-  return 0;
+U16 GC_GOVNODATE() {
+  time_t rawtm;
+  struct tm* localtm;
+
+  time(&rawtm);
+  localtm = localtime(&rawtm);
+  return (localtm->tm_mday) + (localtm->tm_mon * 31) + (localtm->tm_year - 70);
+}
+
+U0 fatal(char* msg) {
+  printf("gc16: \033[91mcannot operate\033[0m, error:\n  %s", msg);
 }

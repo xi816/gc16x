@@ -295,7 +295,7 @@ scani:
   lda $00
 .loop:
   int $01
-  pop %bx
+  pop %bi
 
   cmp %bx '0' ; Check if less than '0'
   jl .loop

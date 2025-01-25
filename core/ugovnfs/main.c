@@ -1,17 +1,25 @@
 #include <stdio.h>
+#include <unistd.h>
 #include <string.h>
-
 #include <holyc-types.h>
+
+U8* get_gfs_label(U8 magicbyte) {
+  switch (magicbyte) {
+    case 0x89: return "GovnFS 1.3";
+    default:   return "Unknown filesystem";
+  }
+}
 
 // The header is the first 32 bytes of the disk
 U8 readHeader(U8* disk) {
   puts("Disk info:");
   printf("  Magic byte: %02X\n", disk[0x00]);
-  printf("  Filesystem: \"%c%c%c%c%c%c%c%c%c%c%c\"\n",
-    disk[0x01], disk[0x02], disk[0x03], disk[0x04], disk[0x05], disk[0x06],
-    disk[0x07], disk[0x08], disk[0x09], disk[0x0A], disk[0x0B]);
-  printf("  Serial number: %02X%02X%02X%02X\n", disk[0x0C], disk[0x0D], disk[0x0E], disk[0x0F]);
-  printf("  Disk size (sectors): %02X%02X\n", disk[0x10], disk[0x11]);
+  printf("  Filesystem: %s\n", get_gfs_label(disk[0x00]));
+  printf("  Filesystem label: \"");
+  fflush(stdout);
+  write(1, disk+0x01, 11);
+  printf("\"\n  Serial number: %02X%02X%02X%02X\n", disk[0x0C], disk[0x0D], disk[0x0E], disk[0x0F]);
+  printf("  Disk size (sectors): %d\n", disk[0x10]);
   return 0;
 }
 

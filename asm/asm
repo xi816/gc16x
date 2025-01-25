@@ -58,13 +58,14 @@ def PrintLabs(labs: dict):
     print(f"{i+':': <30}${hex(labs[i])[2:].upper():0>4}");
 
 # Lexer:
-def Lex(prog: str):
+def Lex(prog: str, filename: str):
   prog += "\n\0";
-  toks = [];
-  pos = 0;
-  proglen = len(prog);
-  buf = "";
-  labelscope = "";
+  labelscope: str  = "";
+  proglen:    int  = len(prog);
+  linenum:    int  = 1;
+  toks:       list = [];
+  pos:        int  = 0;
+  buf:        str  = "";
   while (True):
     if (prog[pos] == "\0"):
       toks.append((T_EOL,));
@@ -82,13 +83,14 @@ def Lex(prog: str):
       pos += 1;
       while ((prog[pos] != "*") or (prog[pos+1] != "/")):
         pos += 1;
-      pos += 2;
+      pos += 1;
     elif (prog[pos] in WHI):
       pos += 1;
     elif (prog[pos] == "\n"):
       if ((toks) and (toks[-1][0] != T_EOL)):
         toks.append((T_EOL,));
       pos += 1;
+      linenum += 1;
     elif (prog[pos] in "."): # Local label
       pos += 1;
       while (prog[pos] in LETEXT):
@@ -110,10 +112,8 @@ def Lex(prog: str):
         toks.append((T_REG, KEYR.index(buf)));
         # cpos += 1;
       else:
-        print(f"\033[31mUnknown\033[0m register {buf}");
-        print(f"\033[33m  Note:\033[0m at position {hex(pos)[2:]:0>4}h");
-        print(f"\033[33m  Note:\033[0m at position {pos}");
-        return 1;
+        print(f"kasm: {filename}:{linenum}:1: Unknown register {buf}");
+        exit(1);
       buf = "";
     elif (prog[pos] in DIG):
       while (prog[pos] in DIG):
@@ -127,6 +127,9 @@ def Lex(prog: str):
       while (prog[pos] != "\""):
         if (prog[pos] == "$"):
           buf += "\n";
+        elif (prog[pos] == "\n"):
+          print(f"kasm: {filename}:{linenum}:1: Unterminated string literal");
+          exit(1);
         elif ((prog[pos] == "\\") and (prog[pos+1] == "\"")):
           buf += "\"";
           pos += 1;
@@ -159,8 +162,7 @@ def Lex(prog: str):
         buf = ord(prog[pos]);
       pos += 1;
       if (prog[pos] != "'"):
-        print("\033[31mError\033[0m: unterminated character literal");
-        print("\033[96mHint\033[0m: the syntax is '([a-zA-Z$])|(\\^[@-`$])'");
+        print(f"kasm: {filename}:{linenum}:1: Unterminated character literal");
         exit(1);
       pos += 1;
       toks.append((T_INT, buf));
@@ -1171,7 +1173,7 @@ def main(argc: int, argv: list) -> int:
   with open(progname, "r") as fl:
     src = fl.read();
   src = RemEmpty(src)+"\0";
-  tokens, exitcode = Lex(src);
+  tokens, exitcode = Lex(src, progname);
   if (type(tokens[1]) is int):
     print("Fatal error. Can't compile");
     exit(tokens);

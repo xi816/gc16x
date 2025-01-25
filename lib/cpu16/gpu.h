@@ -76,18 +76,7 @@ U0 GGinit(gc_gg16* gg, SDL_Renderer* r) {
 }
 
 U0 GGtype(gc_gg16* gg, SDL_Renderer* r, U16 pos, U8 byte) {
-  if (!(pos % 2)) {
-    gg->vga[pos] &= 0b00001111;
-    gg->vga[pos] |= (byte % 16) << 4;
-    gg->vga[pos+1] &= 0b00001111;
-    gg->vga[pos+1] |= (byte % 16) << 4;
-  }
-  else {
-    gg->vga[pos] &= 0b11110000;
-    gg->vga[pos] |= byte % 16;
-    gg->vga[pos+1] &= 0b11110000;
-    gg->vga[pos+1] |= byte % 16;
-  }
+  gg->vga[pos] = (byte << 4) + (byte);
 }
 
 U0 GGpage(gc_gg16* gg, SDL_Renderer* r) {
@@ -96,7 +85,6 @@ U0 GGpage(gc_gg16* gg, SDL_Renderer* r) {
     byte = gg->vga[i];
     SDL_SetRenderDrawColor(r, rgbv[byte/16].r, rgbv[byte/16].g, rgbv[byte/16].b, 0xFF);
     SDL_RenderDrawPoint(r, i%WINW, i/WINW);
-    SDL_SetRenderDrawColor(r, rgbv[byte%16].r, rgbv[byte%16].g, rgbv[byte%16].b, 0xFF);
     SDL_RenderDrawPoint(r, (i+1)%WINW, (i+1)/WINW);
   }
   SDL_RenderPresent(r);

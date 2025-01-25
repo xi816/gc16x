@@ -244,6 +244,10 @@ U8 INT(GC* gc, bool ri) {
       gc->DX.word = rand() % 65536;
       break;
     }
+    case INT_DATE: {
+      gc->DX.word = GC_GOVNODATE();
+      break;
+    }
     case INT_WAIT: {
       usleep((U32)(gc->DX.word)*1000); // the maximum is about 65.5 seconds
       break;
@@ -848,8 +852,12 @@ U8 LDGZG(GC* gc) {   // 66 3A -- LDG Zero Page,G
 
 // 66 55 -- Load ax with m16
 U8 LDAA(GC* gc) {
-  gc->AX.word = gc->mem[ReadWord(gc, gc->PC.word+1)] + gc->disp_prefix;
-  gc->disp_prefix = 0xFF;
+  gc->AX.word = gc->mem[ReadWord(gc, gc->PC.word+1)]      + \
+    (((gc->disp_prefix & 0b00000001))      * gc->SI.word) + \
+    (((gc->disp_prefix & 0b00000010) >> 1) * gc->GI.word) + \
+    (((gc->disp_prefix & 0b00000100) >> 2) * gc->IX.word) + \
+    (((gc->disp_prefix & 0b00001000) >> 3) * gc->IY.word);
+  gc->disp_prefix = 0x00;
   gc->PC.word += 3;
   return 0;
 }
@@ -1118,7 +1126,12 @@ U8 DEXM(GC* gc) {   // 90
 }
 
 U8 _PREF(GC* gc) {
-  gc->disp_prefix = gc->mem[gc->PC.word++] - 0x90;
+  if (!gc->disp_prefix) gc->disp_prefix = gc->mem[gc->PC.word++] - 0x90;
+  else {
+    fatal("Two prefixes of the same type: disp_prefix\n");
+    old_st_legacy;
+    exit(1);
+  }
   return 0;
 }
 
@@ -1209,7 +1222,7 @@ U8 (*INSTS[256])() = {
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &PG66 , &UNK  , &UNK  , &CMPpi, &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &LDA1 , &LDB1 , &LDC1 , &LDD1 , &LDS1 , &LDG1 , &LDSP1, &LDBP1, &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &XCHG4, &UNK  , &LODSW, &STOSW, &UNK  , &UNK  , &UNK  , &UNK  ,
-  &DEXM , &_PREF, &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &DEXM , &_PREF, &_PREF, &_PREF, &_PREF, &_PREF, &_PREF, &_PREF, &_PREF, &_PREF, &_PREF, &_PREF, &_PREF, &_PREF, &_PREF, &_PREF,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &INXM , &STRb , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &LOOP , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &CALL , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,

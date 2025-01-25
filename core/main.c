@@ -9,6 +9,7 @@
 #include <holyc-types.h>
 #include <gc16x-types.h>
 #include <sterm-control.h>
+#include <cpu16/bpf.h>
 #include <cpu16/cpu16.h>
 
 U8 loadBootSector(U8* drive, U8* mem) {
