@@ -60,20 +60,20 @@ typedef struct GC16X GC;
 
 U8 errno;
 
-U0 PageDump(GC gc, U8 page);
-U0 StackDump(GC gc, U16 c);
-U0 RegDump(GC gc);
+U0 PageDump(GC* gc, U8 page);
+U0 StackDump(GC* gc, U16 c);
+U0 RegDump(GC* gc);
 
-gcbyte ReadByte(GC gc, U16 addr) {
-  return gc.mem[addr];
+gcbyte ReadByte(GC* gc, U16 addr) {
+  return gc->mem[addr];
 }
 
-gcword ReadWord(GC gc, U16 addr) {
-  return (gc.mem[addr]) + (gc.mem[addr+1] << 8);
+gcword ReadWord(GC* gc, U16 addr) {
+  return (gc->mem[addr]) + (gc->mem[addr+1] << 8);
 }
 
-gcword ReadWordRev(GC gc, U16 addr) {
-  return (gc.mem[addr] << 8) + (gc.mem[addr+1]);
+gcword ReadWordRev(GC* gc, U16 addr) {
+  return (gc->mem[addr] << 8) + (gc->mem[addr+1]);
 }
 
 U0 WriteWord(GC* gc, U16 addr, U16 val) {
@@ -105,7 +105,7 @@ gcbyte StackPush(GC* gc, U16 val) {
 
 gcword StackPop(GC* gc) {
   gc->SP.word += 2;
-  return ReadWord(*gc, gc->SP.word-1);
+  return ReadWord(gc, gc->SP.word-1);
 }
 
 gcrc_t ReadRegClust(U8 clust) { // Read a register cluster
@@ -132,35 +132,35 @@ U8 UNK(GC* gc) {    // Unknown instruction
 
 // 0F 29 -- Jump if zero flag set to imm16 address
 U8 JME0(GC* gc) {
-  if (gc->PS & 0b00000100) { gc->PC.word = ReadWord(*gc, gc->PC.word+1); gc->PS &= 0b11111011; }
+  if (gc->PS & 0b00000100) { gc->PC.word = ReadWord(gc, gc->PC.word+1); gc->PS &= 0b11111011; }
   else { gc->PC.word += 3; }
   return 0;
 }
 
 // 0F 2A -- Jump set to imm16 address if zero flag not
 U8 JMNE0(GC* gc) {
-  if (!((gc->PS & 0b00000100) >> 2)) { gc->PC.word = ReadWord(*gc, gc->PC.word+1); gc->PS &= 0b11111011; }
+  if (!((gc->PS & 0b00000100) >> 2)) { gc->PC.word = ReadWord(gc, gc->PC.word+1); gc->PS &= 0b11111011; }
   else { gc->PC.word += 3; }
   return 0;
 }
 
 // 0F BB -- Jump to imm16 address if negative flag set
 U8 JL0(GC* gc) {
-  if (!(gc->PS & 0b00000010)) { gc->PC.word = ReadWord(*gc, gc->PC.word+1); gc->PS &= 0b11111101; }
+  if (!(gc->PS & 0b00000010)) { gc->PC.word = ReadWord(gc, gc->PC.word+1); gc->PS &= 0b11111101; }
   else { gc->PC.word += 3; }
   return 0;
 }
 
 // 0F CB -- Jump to imm16 address if negative flag set
 U8 JG0(GC* gc) {
-  if (gc->PS & 0b00000010) { gc->PC.word = ReadWord(*gc, gc->PC.word+1); gc->PS &= 0b11111101; }
+  if (gc->PS & 0b00000010) { gc->PC.word = ReadWord(gc, gc->PC.word+1); gc->PS &= 0b11111101; }
   else { gc->PC.word += 3; }
   return 0;
 }
 
 // 0F 30 -- Jump to imm16 address unconditionally
 U8 JMP0(GC* gc) {
-  gc->PC.word = ReadWord(*gc, gc->PC.word+1);
+  gc->PC.word = ReadWord(gc, gc->PC.word+1);
   return 0;
 }
 
@@ -172,7 +172,7 @@ U8 JMP1(GC* gc) {
 
 // 0F 32 -- Jump to m16 address (*m16) unconditionally
 U8 JMP2(GC* gc) {
-  gc->PC.word = gc->mem[ReadWord(*gc, gc->PC.word+1)];
+  gc->PC.word = gc->mem[ReadWord(gc, gc->PC.word+1)];
   return 0;
 }
 
@@ -185,7 +185,7 @@ U8 POP1(GC* gc) {   // 0F 80
 
 // 0F 84 - Push imm16
 U8 PUSH0(GC* gc) {
-  StackPush(gc, ReadWord(*gc, gc->PC.word+1));
+  StackPush(gc, ReadWord(gc, gc->PC.word+1));
   gc->PC.word += 3;
   return 0;
 }
@@ -212,10 +212,10 @@ U8 INT(GC* gc, bool ri) {
   }
   U8 val;
   if (ri) {
-    val = *ReadReg(gc, ReadByte(*gc, gc->PC.word+1));
+    val = *ReadReg(gc, ReadByte(gc, gc->PC.word+1));
   }
   else {
-    val = ReadByte(*gc, gc->PC.word+1);
+    val = ReadByte(gc, gc->PC.word+1);
   }
   switch (val) {
     case INT_EXIT: {
@@ -269,8 +269,8 @@ U8 INT1(GC* gc) {
 // 0F 9D - Trap and show the stack and registers (debug)
 U8 TRAP(GC* gc) {
   printf("\n\033[31mTrapped\033[0m at \033[33m%04X\033[0m\n", gc->PC.word);
-  StackDump(*gc, 10);
-  RegDump(*gc);
+  StackDump(gc, 10);
+  RegDump(gc);
   puts("-- Press any key to continue --");
   getchar();
   gc->PC.word++;
@@ -330,115 +330,115 @@ U8 DIV11(GC* gc) {  // 10 03
 }
 
 U8 ADDA0(GC* gc) {  // 10 08
-  gc->AX.word += ReadWord(*gc, gc->PC.word+1);
+  gc->AX.word += ReadWord(gc, gc->PC.word+1);
   gc->PC.word += 3;
   return 0;
 }
 
 U8 ADDB0(GC* gc) {  // 10 09
-  gc->BX.word += ReadWord(*gc, gc->PC.word+1);
+  gc->BX.word += ReadWord(gc, gc->PC.word+1);
   gc->PC.word += 3;
   return 0;
 }
 
 U8 ADDC0(GC* gc) {  // 10 0A
-  gc->CX.word += ReadWord(*gc, gc->PC.word+1);
+  gc->CX.word += ReadWord(gc, gc->PC.word+1);
   gc->PC.word += 3;
   return 0;
 }
 
 U8 ADDD0(GC* gc) {  // 10 0B
-  gc->DX.word += ReadWord(*gc, gc->PC.word+1);
+  gc->DX.word += ReadWord(gc, gc->PC.word+1);
   gc->PC.word += 3;
   return 0;
 }
 
 U8 ADDS0(GC* gc) {  // 10 0C
-  gc->SI.word += ReadWord(*gc, gc->PC.word+1);
+  gc->SI.word += ReadWord(gc, gc->PC.word+1);
   gc->PC.word += 3;
   return 0;
 }
 
 U8 ADDG0(GC* gc) {  // 10 0D
-  gc->GI.word += ReadWord(*gc, gc->PC.word+1);
+  gc->GI.word += ReadWord(gc, gc->PC.word+1);
   gc->PC.word += 3;
   return 0;
 }
 
 U8 SUBA0(GC* gc) {  // 10 18
-  gc->AX.word -= ReadWord(*gc, gc->PC.word+1);
+  gc->AX.word -= ReadWord(gc, gc->PC.word+1);
   gc->PC.word += 3;
   return 0;
 }
 
 U8 SUBB0(GC* gc) {  // 10 19
-  gc->BX.word -= ReadWord(*gc, gc->PC.word+1);
+  gc->BX.word -= ReadWord(gc, gc->PC.word+1);
   gc->PC.word += 3;
   return 0;
 }
 
 U8 SUBC0(GC* gc) {  // 10 1A
-  gc->CX.word -= ReadWord(*gc, gc->PC.word+1);
+  gc->CX.word -= ReadWord(gc, gc->PC.word+1);
   gc->PC.word += 3;
   return 0;
 }
 
 U8 SUBD0(GC* gc) {  // 10 1B
-  gc->DX.word -= ReadWord(*gc, gc->PC.word+1);
+  gc->DX.word -= ReadWord(gc, gc->PC.word+1);
   gc->PC.word += 3;
   return 0;
 }
 
 U8 SUBS0(GC* gc) {  // 10 1C
-  gc->SI.word -= ReadWord(*gc, gc->PC.word+1);
+  gc->SI.word -= ReadWord(gc, gc->PC.word+1);
   gc->PC.word += 3;
   return 0;
 }
 
 U8 SUBG0(GC* gc) {  // 10 1D
-  gc->GI.word -= ReadWord(*gc, gc->PC.word+1);
+  gc->GI.word -= ReadWord(gc, gc->PC.word+1);
   gc->PC.word += 3;
   return 0;
 }
 
 U8 MULA0(GC* gc) {  // 10 28
-  gc->AX.word *= ReadWord(*gc, gc->PC.word+1);
+  gc->AX.word *= ReadWord(gc, gc->PC.word+1);
   gc->PC.word += 3;
   return 0;
 }
 
 U8 MULB0(GC* gc) {  // 10 29
-  gc->BX.word *= ReadWord(*gc, gc->PC.word+1);
+  gc->BX.word *= ReadWord(gc, gc->PC.word+1);
   gc->PC.word += 3;
   return 0;
 }
 
 U8 MULC0(GC* gc) {  // 10 2A
-  gc->CX.word *= ReadWord(*gc, gc->PC.word+1);
+  gc->CX.word *= ReadWord(gc, gc->PC.word+1);
   gc->PC.word += 3;
   return 0;
 }
 
 U8 MULD0(GC* gc) {  // 10 2B
-  gc->DX.word *= ReadWord(*gc, gc->PC.word+1);
+  gc->DX.word *= ReadWord(gc, gc->PC.word+1);
   gc->PC.word += 3;
   return 0;
 }
 
 U8 MULS0(GC* gc) {  // 10 2C
-  gc->SI.word *= ReadWord(*gc, gc->PC.word+1);
+  gc->SI.word *= ReadWord(gc, gc->PC.word+1);
   gc->PC.word += 3;
   return 0;
 }
 
 U8 MULG0(GC* gc) {  // 10 2D
-  gc->GI.word *= ReadWord(*gc, gc->PC.word+1);
+  gc->GI.word *= ReadWord(gc, gc->PC.word+1);
   gc->PC.word += 3;
   return 0;
 }
 
 U8 DIVA0(GC* gc) {  // 10 38
-  U16 val = ReadWord(*gc, gc->PC.word+1);
+  U16 val = ReadWord(gc, gc->PC.word+1);
   gc->DX.word = gc->AX.word % val; // The remainder is always stored into D
   gc->AX.word /= val;
   gc->PC.word += 3;
@@ -446,7 +446,7 @@ U8 DIVA0(GC* gc) {  // 10 38
 }
 
 U8 DIVB0(GC* gc) {  // 10 39
-  U16 val = ReadWord(*gc, gc->PC.word+1);
+  U16 val = ReadWord(gc, gc->PC.word+1);
   gc->DX.word = gc->BX.word % val; // The remainder is always stored into D
   gc->BX.word /= val;
   gc->PC.word += 3;
@@ -454,7 +454,7 @@ U8 DIVB0(GC* gc) {  // 10 39
 }
 
 U8 DIVC0(GC* gc) {  // 10 3A
-  U16 val = ReadWord(*gc, gc->PC.word+1);
+  U16 val = ReadWord(gc, gc->PC.word+1);
   gc->DX.word = gc->CX.word % val; // The remainder is always stored into D
   gc->CX.word /= val;
   gc->PC.word += 3;
@@ -462,13 +462,13 @@ U8 DIVC0(GC* gc) {  // 10 3A
 }
 
 U8 DIVD0(GC* gc) {  // 10 3B
-  gc->DX.word /= ReadWord(*gc, gc->PC.word+1);
+  gc->DX.word /= ReadWord(gc, gc->PC.word+1);
   gc->PC.word += 3;
   return 0;
 }
 
 U8 DIVS0(GC* gc) {  // 10 3C
-  U16 val = ReadWord(*gc, gc->PC.word+1);
+  U16 val = ReadWord(gc, gc->PC.word+1);
   gc->DX.word = gc->SI.word % val; // The remainder is always stored into D
   gc->SI.word /= val;
   gc->PC.word += 3;
@@ -476,7 +476,7 @@ U8 DIVS0(GC* gc) {  // 10 3C
 }
 
 U8 DIVG0(GC* gc) {  // 10 3D
-  U16 val = ReadWord(*gc, gc->PC.word+1);
+  U16 val = ReadWord(gc, gc->PC.word+1);
   gc->DX.word = gc->GI.word % val; // The remainder is always stored into D
   gc->GI.word /= val;
   gc->PC.word += 3;
@@ -496,25 +496,25 @@ U8 STGRB(GC* gc) {  // 10 81
 }
 
 U8 LODSB(GC* gc) {  // 10 87
-  gc->SI.word = ReadByte(*gc, gc->SI.word);
+  gc->SI.word = ReadByte(gc, gc->SI.word);
   gc->PC.word++;
   return 0;
 }
 
 U8 LODGB(GC* gc) {  // 10 88
-  gc->GI.word = ReadByte(*gc, gc->GI.word);
+  gc->GI.word = ReadByte(gc, gc->GI.word);
   gc->PC.word++;
   return 0;
 }
 
 U8 STOSB(GC* gc) {  // 10 89
-  gc->mem[gc->SI.word] = ReadByte(*gc, gc->PC.word+1);
+  gc->mem[gc->SI.word] = ReadByte(gc, gc->PC.word+1);
   gc->PC.word += 2;
   return 0;
 }
 
 U8 STOGB(GC* gc) {  // 10 8A
-  gc->mem[gc->GI.word] = ReadByte(*gc, gc->PC.word+1);
+  gc->mem[gc->GI.word] = ReadByte(gc, gc->PC.word+1);
   gc->PC.word += 2;
   return 0;
 }
@@ -640,9 +640,9 @@ U8 CMP11(GC* gc) {  // 10 F6
 }
 
 U8 CMP10(GC* gc) {  // 10 EE
-  if ((*ReadReg(gc, gc->mem[gc->PC.word+1]) == ReadWord(*gc, gc->PC.word+2))) gc->PS |= 0b00000100;
+  if ((*ReadReg(gc, gc->mem[gc->PC.word+1]) == ReadWord(gc, gc->PC.word+2))) gc->PS |= 0b00000100;
   else gc->PS &= 0b11111011;
-  if (((I16)(*ReadReg(gc, gc->mem[gc->PC.word+1]) - ReadWord(*gc, gc->PC.word+2)) < 0)) gc->PS |= 0b00000010;
+  if (((I16)(*ReadReg(gc, gc->mem[gc->PC.word+1]) - ReadWord(gc, gc->PC.word+2)) < 0)) gc->PS |= 0b00000010;
   else gc->PS &= 0b11111101;
   gc->PC.word += 4; // Set equal flag if a register and
   return 0;      // immediate are equal
@@ -703,37 +703,37 @@ U8 CLI(GC* gc) {   // 52
 }
 
 U8 LDA0(GC* gc) {   // 40 -- LDA imm16
-  gc->AX.word = ReadWord(*gc, gc->PC.word+1);
+  gc->AX.word = ReadWord(gc, gc->PC.word+1);
   gc->PC.word += 3;
   return 0;
 }
 
 U8 LDB0(GC* gc) {   // 41 -- LDB imm16
-  gc->BX.word = ReadWord(*gc, gc->PC.word+1);
+  gc->BX.word = ReadWord(gc, gc->PC.word+1);
   gc->PC.word += 3;
   return 0;
 }
 
 U8 LDC0(GC* gc) {   // 42 -- LDC imm16
-  gc->CX.word = ReadWord(*gc, gc->PC.word+1);
+  gc->CX.word = ReadWord(gc, gc->PC.word+1);
   gc->PC.word += 3;
   return 0;
 }
 
 U8 LDD0(GC* gc) {   // 43 -- LDD imm16
-  gc->DX.word = ReadWord(*gc, gc->PC.word+1);
+  gc->DX.word = ReadWord(gc, gc->PC.word+1);
   gc->PC.word += 3;
   return 0;
 }
 
 U8 LDS0(GC* gc) {   // 44 -- LDS imm16
-  gc->SI.word = ReadWord(*gc, gc->PC.word+1);
+  gc->SI.word = ReadWord(gc, gc->PC.word+1);
   gc->PC.word += 3;
   return 0;
 }
 
 U8 LDG0(GC* gc) {   // 45 -- LDG imm16
-  gc->GI.word = ReadWord(*gc, gc->PC.word+1);
+  gc->GI.word = ReadWord(gc, gc->PC.word+1);
   gc->PC.word += 3;
   return 0;
 }
@@ -848,182 +848,182 @@ U8 LDGZG(GC* gc) {   // 66 3A -- LDG Zero Page,G
 
 // 66 55 -- Load ax with m16
 U8 LDAA(GC* gc) {
-  gc->AX.word = gc->mem[ReadWord(*gc, gc->PC.word+1)] + gc->disp_prefix;
+  gc->AX.word = gc->mem[ReadWord(gc, gc->PC.word+1)] + gc->disp_prefix;
   gc->disp_prefix = 0xFF;
   gc->PC.word += 3;
   return 0;
 }
 
 U8 LDBA(GC* gc) {    // 66 56 -- LDB Absolute
-  gc->BX.word = gc->mem[ReadWord(*gc, gc->PC.word+1)];
+  gc->BX.word = gc->mem[ReadWord(gc, gc->PC.word+1)];
   gc->PC.word += 3;
   return 0;
 }
 
 U8 LDCA(GC* gc) {    // 66 57 -- LDC Absolute
-  gc->CX.word = gc->mem[ReadWord(*gc, gc->PC.word+1)];
+  gc->CX.word = gc->mem[ReadWord(gc, gc->PC.word+1)];
   gc->PC.word += 3;
   return 0;
 }
 
 U8 LDDA(GC* gc) {    // 66 58 -- LDD Absolute
-  gc->DX.word = gc->mem[ReadWord(*gc, gc->PC.word+1)];
+  gc->DX.word = gc->mem[ReadWord(gc, gc->PC.word+1)];
   gc->PC.word += 3;
   return 0;
 }
 
 U8 LDSA(GC* gc) {    // 66 59 -- LDS Absolute
-  gc->SI.word = gc->mem[ReadWord(*gc, gc->PC.word+1)];
+  gc->SI.word = gc->mem[ReadWord(gc, gc->PC.word+1)];
   gc->PC.word += 3;
   return 0;
 }
 
 U8 LDGA(GC* gc) {    // 66 5A -- LDG Absolute
-  gc->GI.word = gc->mem[ReadWord(*gc, gc->PC.word+1)];
+  gc->GI.word = gc->mem[ReadWord(gc, gc->PC.word+1)];
   gc->PC.word += 3;
   return 0;
 }
 
 U8 LDAAS(GC* gc) {   // 66 65 -- LDA Absolute,S
-  gc->AX.word = gc->mem[ReadWord(*gc, gc->PC.word+1)+gc->SI.word];
+  gc->AX.word = gc->mem[ReadWord(gc, gc->PC.word+1)+gc->SI.word];
   gc->PC.word += 3;
   return 0;
 }
 
 U8 LDBAS(GC* gc) {   // 66 66 -- LDB Absolute,S
-  gc->BX.word = gc->mem[ReadWord(*gc, gc->PC.word+1)+gc->SI.word];
+  gc->BX.word = gc->mem[ReadWord(gc, gc->PC.word+1)+gc->SI.word];
   gc->PC.word += 3;
   return 0;
 }
 
 U8 LDCAS(GC* gc) {   // 66 67 -- LDC Absolute,S
-  gc->CX.word = gc->mem[ReadWord(*gc, gc->PC.word+1)+gc->SI.word];
+  gc->CX.word = gc->mem[ReadWord(gc, gc->PC.word+1)+gc->SI.word];
   gc->PC.word += 3;
   return 0;
 }
 
 U8 LDDAS(GC* gc) {   // 66 68 -- LDD Absolute,S
-  gc->DX.word = gc->mem[ReadWord(*gc, gc->PC.word+1)+gc->SI.word];
+  gc->DX.word = gc->mem[ReadWord(gc, gc->PC.word+1)+gc->SI.word];
   gc->PC.word += 3;
   return 0;
 }
 
 U8 LDSAS(GC* gc) {   // 66 69 -- LDS Absolute,S
-  gc->SI.word = gc->mem[ReadWord(*gc, gc->PC.word+1)+gc->SI.word];
+  gc->SI.word = gc->mem[ReadWord(gc, gc->PC.word+1)+gc->SI.word];
   gc->PC.word += 3;
   return 0;
 }
 
 U8 LDGAS(GC* gc) {   // 66 6A -- LDG Absolute,S
-  gc->GI.word = gc->mem[ReadWord(*gc, gc->PC.word+1)+gc->SI.word];
+  gc->GI.word = gc->mem[ReadWord(gc, gc->PC.word+1)+gc->SI.word];
   gc->PC.word += 3;
   return 0;
 }
 
 U8 LDAAG(GC* gc) {   // 66 75 -- LDA Absolute,G
-  gc->AX.word = gc->mem[ReadWord(*gc, gc->PC.word+1)+gc->SI.word];
+  gc->AX.word = gc->mem[ReadWord(gc, gc->PC.word+1)+gc->SI.word];
   gc->PC.word += 3;
   return 0;
 }
 
 U8 LDBAG(GC* gc) {   // 66 76 -- LDB Absolute,G
-  gc->BX.word = gc->mem[ReadWord(*gc, gc->PC.word+1)+gc->SI.word];
+  gc->BX.word = gc->mem[ReadWord(gc, gc->PC.word+1)+gc->SI.word];
   gc->PC.word += 3;
   return 0;
 }
 
 U8 LDCAG(GC* gc) {   // 66 77 -- LDC Absolute,G
-  gc->CX.word = gc->mem[ReadWord(*gc, gc->PC.word+1)+gc->SI.word];
+  gc->CX.word = gc->mem[ReadWord(gc, gc->PC.word+1)+gc->SI.word];
   gc->PC.word += 3;
   return 0;
 }
 
 U8 LDDAG(GC* gc) {   // 66 78 -- LDD Absolute,G
-  gc->DX.word = gc->mem[ReadWord(*gc, gc->PC.word+1)+gc->SI.word];
+  gc->DX.word = gc->mem[ReadWord(gc, gc->PC.word+1)+gc->SI.word];
   gc->PC.word += 3;
   return 0;
 }
 
 U8 LDSAG(GC* gc) {   // 66 79 -- LDS Absolute,G
-  gc->SI.word = gc->mem[ReadWord(*gc, gc->PC.word+1)+gc->SI.word];
+  gc->SI.word = gc->mem[ReadWord(gc, gc->PC.word+1)+gc->SI.word];
   gc->PC.word += 3;
   return 0;
 }
 
 U8 LDGAG(GC* gc) {   // 66 7A -- LDG Absolute,G
-  gc->GI.word = gc->mem[ReadWord(*gc, gc->PC.word+1)+gc->SI.word];
+  gc->GI.word = gc->mem[ReadWord(gc, gc->PC.word+1)+gc->SI.word];
   gc->PC.word += 3;
   return 0;
 }
 
 U8 LDA0S(GC* gc) {   // 66 85 -- LDA Immediate,S
-  gc->AX.word = ReadWord(*gc, gc->PC.word+1)+gc->SI.word;
+  gc->AX.word = ReadWord(gc, gc->PC.word+1)+gc->SI.word;
   gc->PC.word += 3;
   return 0;
 }
 
 U8 LDB0S(GC* gc) {   // 66 86 -- LDB Immediate,S
-  gc->BX.word = ReadWord(*gc, gc->PC.word+1)+gc->SI.word;
+  gc->BX.word = ReadWord(gc, gc->PC.word+1)+gc->SI.word;
   gc->PC.word += 3;
   return 0;
 }
 
 U8 LDC0S(GC* gc) {   // 66 87 -- LDC Immediate,S
-  gc->CX.word = ReadWord(*gc, gc->PC.word+1)+gc->SI.word;
+  gc->CX.word = ReadWord(gc, gc->PC.word+1)+gc->SI.word;
   gc->PC.word += 3;
   return 0;
 }
 
 U8 LDD0S(GC* gc) {   // 66 88 -- LDD Immediate,S
-  gc->DX.word = ReadWord(*gc, gc->PC.word+1)+gc->SI.word;
+  gc->DX.word = ReadWord(gc, gc->PC.word+1)+gc->SI.word;
   gc->PC.word += 3;
   return 0;
 }
 
 U8 LDS0S(GC* gc) {   // 66 89 -- LDS Immediate,S
-  gc->SI.word = ReadWord(*gc, gc->PC.word+1)+gc->SI.word;
+  gc->SI.word = ReadWord(gc, gc->PC.word+1)+gc->SI.word;
   gc->PC.word += 3;
   return 0;
 }
 
 U8 LDG0S(GC* gc) {   // 66 8A -- LDG Immediate,S
-  gc->GI.word = ReadWord(*gc, gc->PC.word+1)+gc->SI.word;
+  gc->GI.word = ReadWord(gc, gc->PC.word+1)+gc->SI.word;
   gc->PC.word += 3;
   return 0;
 }
 
 U8 LDA0G(GC* gc) {   // 66 95 -- LDA Immediate,G
-  gc->AX.word = ReadWord(*gc, gc->PC.word+1)+gc->GI.word;
+  gc->AX.word = ReadWord(gc, gc->PC.word+1)+gc->GI.word;
   gc->PC.word += 3;
   return 0;
 }
 
 U8 LDB0G(GC* gc) {   // 66 96 -- LDB Immediate,G
-  gc->BX.word = ReadWord(*gc, gc->PC.word+1)+gc->GI.word;
+  gc->BX.word = ReadWord(gc, gc->PC.word+1)+gc->GI.word;
   gc->PC.word += 3;
   return 0;
 }
 
 U8 LDC0G(GC* gc) {   // 66 97 -- LDC Immediate,G
-  gc->CX.word = ReadWord(*gc, gc->PC.word+1)+gc->GI.word;
+  gc->CX.word = ReadWord(gc, gc->PC.word+1)+gc->GI.word;
   gc->PC.word += 3;
   return 0;
 }
 
 U8 LDD0G(GC* gc) {   // 66 98 -- LDD Immediate,G
-  gc->DX.word = ReadWord(*gc, gc->PC.word+1)+gc->GI.word;
+  gc->DX.word = ReadWord(gc, gc->PC.word+1)+gc->GI.word;
   gc->PC.word += 3;
   return 0;
 }
 
 U8 LDS0G(GC* gc) {   // 66 99 -- LDS Immediate,G
-  gc->SI.word = ReadWord(*gc, gc->PC.word+1)+gc->GI.word;
+  gc->SI.word = ReadWord(gc, gc->PC.word+1)+gc->GI.word;
   gc->PC.word += 3;
   return 0;
 }
 
 U8 LDG0G(GC* gc) {   // 66 9A -- LDG Immediate,G
-  gc->GI.word = ReadWord(*gc, gc->PC.word+1)+gc->GI.word;
+  gc->GI.word = ReadWord(gc, gc->PC.word+1)+gc->GI.word;
   gc->PC.word += 3;
   return 0;
 }
@@ -1078,9 +1078,9 @@ U8 LDBP1(GC* gc) {   // 66 AC
 
 // 69 -- Compare *reg16 and imm16
 U8 CMPpi(GC* gc) {
-  if (gc->mem[*ReadReg(gc, gc->mem[gc->PC.word+1])] == ReadWord(*gc, gc->PC.word+2)) gc->PS |= 0b00000100;
+  if (gc->mem[*ReadReg(gc, gc->mem[gc->PC.word+1])] == ReadWord(gc, gc->PC.word+2)) gc->PS |= 0b00000100;
   else gc->PS &= 0b11111011;
-  if (((I16)(gc->mem[*ReadReg(gc, gc->mem[gc->PC.word+1])] - ReadWord(*gc, gc->PC.word+2)) < 0)) gc->PS |= 0b00000010;
+  if (((I16)(gc->mem[*ReadReg(gc, gc->mem[gc->PC.word+1])] - ReadWord(gc, gc->PC.word+2)) < 0)) gc->PS |= 0b00000010;
   else gc->PS &= 0b11111101;
   gc->PC.word += 4;
   return 0;
@@ -1098,7 +1098,7 @@ U8 XCHG4(GC* gc) {
 
 // 8A - Load a word (16 bits) from [si] into ax
 U8 LODSW(GC* gc) {
-  gc->AX.word = ReadWord(*gc, gc->SI.word);
+  gc->AX.word = ReadWord(gc, gc->SI.word);
   gc->PC.word++;
   return 0;
 }
@@ -1112,7 +1112,7 @@ U8 STOSW(GC* gc) {
 
 // 90 - Decrement *m16
 U8 DEXM(GC* gc) {   // 90
-  gc->mem[ReadWord(*gc, gc->PC.word+1)]--;
+  gc->mem[ReadWord(gc, gc->PC.word+1)]--;
   gc->PC.word += 3;
   return 0;
 }
@@ -1137,7 +1137,7 @@ U8 ASR(GC* gc) {    // E0-E8
 
 // B0 - Increment *m16
 U8 INXM(GC* gc) {   // B0
-  gc->mem[ReadWord(*gc, gc->PC.word+1)]++;
+  gc->mem[ReadWord(gc, gc->PC.word+1)]++;
   gc->PC.word += 3;
   return 0;
 }
@@ -1153,7 +1153,7 @@ U8 STRb(GC* gc) {
 U8 LOOP(GC* gc) {
   if (gc->CX.word) {
     gc->CX.word--;
-    gc->PC.word = ReadWord(*gc, gc->PC.word+1);
+    gc->PC.word = ReadWord(gc, gc->PC.word+1);
   }
   else {
     gc->PC.word += 3;
@@ -1164,7 +1164,7 @@ U8 LOOP(GC* gc) {
 // C7 - Call a subroutine/function
 U8 CALL(GC* gc) {
   StackPush(gc, gc->PC.word+3);
-  gc->PC.word = ReadWord(*gc, gc->PC.word+1);
+  gc->PC.word = ReadWord(gc, gc->PC.word+1);
   return 0;
 }
 
@@ -1294,43 +1294,43 @@ U0 Reset(GC* gc, U16 driveboot) {
   gc->SP.word = 0x1000;
   gc->BP.word = 0x1000;
   gc->PC.word = 0x0000;
-  
+
   gc->PS = 0b01000000;
 }
 
-U0 PageDump(GC gc, U8 page) {
+U0 PageDump(GC* gc, U8 page) {
   for (U16 i = (page*256); i < (page*256)+256; i++) {
     if (!(i % 16)) putchar(10);
-    printf("%02X ", gc.mem[i]);
+    printf("%02X ", gc->mem[i]);
   }
 }
 
-U0 StackDump(GC gc, U16 c) {
-  printf("SP: %04X\n", gc.SP);
+U0 StackDump(GC* gc, U16 c) {
+  printf("SP: %04X\n", gc->SP.word);
   for (U16 i = 0x1000; i > 0x1000-c; i--) {
-    printf("%04X: %02X\n", i, gc.mem[i]);
+    printf("%04X: %02X\n", i, gc->mem[i]);
   }
 }
 
-U0 RegDump(GC gc) {
-  printf("\033[11A\033[10CAX %04X\n",   gc.AX);
-  printf("\033[10CBX %04X\n",           gc.BX);
-  printf("\033[10CCX %04X\n",           gc.CX);
-  printf("\033[10CDX %04X\n",           gc.DX);
-  printf("\033[10CSI %04X ASCII: %c\n", gc.SI, gc.SI);
-  printf("\033[10CGI %04X ASCII: %c\n", gc.GI, gc.GI);
-  printf("\033[10CEX %04X\n",           gc.EX);
-  printf("\033[10CFX %04X\n",           gc.FX);
-  printf("\033[10CHX %04X\n",           gc.HX);
-  printf("\033[10CLX %04X\n",           gc.LX);
-  printf("\033[10CX  %04X\n",           gc.X);
-  printf("\033[10CY  %04X\n",           gc.Y);
-  printf("\033[10CIX %04X ASCII: %c\n", gc.IX, gc.IX);
-  printf("\033[10CIY %04X ASCII: %c\n", gc.IY, gc.IY);
-  printf("\033[10CSP %04X\n",           gc.SP);
-  printf("\033[10CBP %04X\n",           gc.BP);
-  printf("\033[10CPC %04X\n",           gc.PC);
-  printf("\033[10CPS %08b\n",           gc.PS);
+U0 RegDump(GC* gc) {
+  printf("\033[11A\033[10CAX %04X\n",   gc->AX);
+  printf("\033[10CBX %04X\n",           gc->BX);
+  printf("\033[10CCX %04X\n",           gc->CX);
+  printf("\033[10CDX %04X\n",           gc->DX);
+  printf("\033[10CSI %04X ASCII: %c\n", gc->SI, gc->SI);
+  printf("\033[10CGI %04X ASCII: %c\n", gc->GI, gc->GI);
+  printf("\033[10CEX %04X\n",           gc->EX);
+  printf("\033[10CFX %04X\n",           gc->FX);
+  printf("\033[10CHX %04X\n",           gc->HX);
+  printf("\033[10CLX %04X\n",           gc->LX);
+  printf("\033[10CX  %04X\n",           gc->X);
+  printf("\033[10CY  %04X\n",           gc->Y);
+  printf("\033[10CIX %04X ASCII: %c\n", gc->IX, gc->IX);
+  printf("\033[10CIY %04X ASCII: %c\n", gc->IY, gc->IY);
+  printf("\033[10CSP %04X\n",           gc->SP);
+  printf("\033[10CBP %04X\n",           gc->BP);
+  printf("\033[10CPC %04X\n",           gc->PC);
+  printf("\033[10CPS %08b\n",           gc->PS);
   printf("\033[10C   -I---ZNC\033[0m\n");
 }
 
