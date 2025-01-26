@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/bin/bash
 
 build() {
   echo -e "compiling boot.asm"

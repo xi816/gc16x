@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/bin/bash
 
 build () {
   gcc main.c -I../../lib -o ../../ugovnfs;

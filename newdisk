@@ -1,4 +1,5 @@
-#!/usr/bin/bash
+#!/bin/bash
+
 set -e
 
 if [ $# = 0 ]; then
@@ -11,8 +12,12 @@ if [ $# = 1 ]; then
   exit 1;
 fi
 
+if [ -f $1 ]; then
+    rm -f $1
+fi
+
 touch $1
-truncate $1 -s $2
+truncate -s $2 $1
 
 printf "Disk $1 successfully created\n" $1
 

@@ -1,10 +1,13 @@
-#!/usr/bin/bash
+#!/bin/bash
+
 print_state() {
-  printf "building $1\n"
+  printf "Building $1...\n"
 }
+
 completed_state() {
-  printf "Compilation finished\n"
+  printf "\nCompilation finished!\n"
 }
+
 build_state() {
   print_state $1
   cd $2
@@ -12,11 +15,9 @@ build_state() {
   cd - > /dev/null
 }
 
-build_state "gc16"        "./"
 build_state "gasman"      "core/gasman/"
 build_state "gboot"       "core/gboot/"
 build_state "ugovnfs"     "core/ugovnfs/"
 build_state "GovnOS"      "govnos/"
-echo
 completed_state
 

@@ -1,4 +1,4 @@
-#!/usr/bin/bash
+#!/bin/bash
 set -e
 
 if [ $# = 0 ]; then
@@ -9,6 +9,6 @@ fi
 printf "Formatting %s to GovnFS ...\n" $1
 ./mkfs.govnfs $1
 printf "Loading GovnOS into the boot sector of %s ...\n" $1
-./gboot $1 govnos/boot.bin > /dev/null
+./gboot $1 govnos/boot.bin
 printf "Done!\n"
 

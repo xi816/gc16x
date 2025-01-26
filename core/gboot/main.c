@@ -59,7 +59,7 @@ I32 main(I32 argc, I8** argv) {
   fread(bsbuf, 1, bslen, bsfile);
 
   printf("Writing to disk (%d bytes of disk storage, %d bytes of boot sector)\n", drvlen, bslen);
-  memcpy(drvbuf+BootSectorStart, bsbuf, bslen);
+  memcpy(drvbuf+BootSectorStart, bsbuf, bslen); // here seg fault
   fseek(drvfile, 0, SEEK_SET);
   fwrite(drvbuf, 1, drvlen, drvfile);
 
