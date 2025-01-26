@@ -11,8 +11,8 @@ CGovnOS is a virtual machine for the Govno Core 16X processor.
 To compile and run GovnOS on GC16X, type:
 ```
 ./ball                         # compile all binaries
-./newdisk name.img 16K         # create new disk image
-./rom-load-govnos name.img     # load boot image
-./gc16 disk name.img           # run govnos
+./newdisk disk.img 16K         # create new disk image
+./rom-load-govnos disk.img     # load boot image
+./gc16 disk disk.img           # run govnos
 ```
 
