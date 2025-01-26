@@ -1,0 +1,42 @@
+#!/bin/python3
+import sys;
+from random import randint;
+
+diskname = sys.argv[1];
+headersize = 32; # Header (32 bytes)
+                 #          |
+                 #          \-----------------------------------------------\
+                 #                                                          |
+def mkfsdisksize(diskname): #                                               |
+  with open(diskname, "rb") as d: #                                         |
+    return len(d.read()); #                                                 |
+                          #                                                 |
+def mkfsheader(disk, ds): #                                                 v
+  disk.write(b"\x89GOVNFS1.3  ");                                         # Signature (1 byte)
+                                                                          # Filesystem name (11 bytes)
+  for i in range(4): disk.write(bytes((randint(0,255),)));                # Serial number (4 bytes)
+  disk.write(bytes((ds%256,)));                                           # Disk size in sectors (1 byte)
+  dl = bytes(((input("Drive letter: (default: A): ")+"A").encode()[0],)); # Disk letter (1 byte)
+  if (dl[0] not in range(65, 91)): dl = b"A";                             # and...
+  disk.write(dl);                                                         # ......
+  disk.write(bytes(14));                                                  # Reserved (14 bytes)
+  return 0;
+
+def mkfsfill(disk, ds):
+  disk.write(bytes(ds-headersize));
+  return 0;
+
+def mkfsmain(diskname):
+  print("mkfs.govnfs 1.1");
+  ds = mkfsdisksize(diskname);
+  disk = open(diskname, "wb");
+
+  print(f"blocks read: {ds//512}");
+  mkfsheader(disk, ds//512);
+  mkfsfill(disk, ds);
+  print(f"blocks written: {ds//512}");
+  disk.close();
+  return 0;
+
+mkfsmain(diskname);
+

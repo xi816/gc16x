@@ -1,7 +1,7 @@
 #!/bin/bash
 
 build () {
-  gcc main.c -I../../lib -o ../../ugovnfs;
+  gcc main.c -I../../lib -o ../../bin/ugovnfs;
 }
 
 # Build

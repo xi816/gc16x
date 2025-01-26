@@ -1,0 +1,99 @@
+first 32 bytes
+------------------
+
+65,504 bytes free
+
+------------------
+
+disk end
+
+||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||||
+
+F0 F1 F2 F7
+
+F0 "file2   txt"(11) F2 "popa/" F2 "aaaaaaa" F0
+F1 "popa/"(11) F1
+F7
+
+------------------------------------------------------------
+A/$ hw
+------------------------------------------------------------
+How to make a GovnFS driver for loading files into memory
+
+strtok: ...
+strcmp: ...
+strcpy: ...
+strcat: ...
+rstrfind: ^^^
+
+&DISK: string1 (rstrfind)
+$0020: string2 (%B)
+
+rstrfind:
+A = *B
+diskpointer = dstrtok(A);
+D = com-file-full;
+*com-file-full = $F0;                 com-file-full here is in %S
+com-file-full++;
+strcat(com-file-full, comm);          comm = "hw"
+strcat(com-file-full, com-file-sign);
+strcmp(diskpointer, com-file-full);
+
+gfs_read_file:
+  lds com_file_full
+  str $F0
+  lda %s
+  ldb cline
+  call strcpy
+  ldb com_file_sign
+  call strcpy
+  lda $0020
+  ldb com_file_full
+  call dstrsubset
+  lds com_file_full
+  call strlen
+  add %s %b              ; S = file content start
+
+  call flcpy
+
+$43
+#67
+          01000011
+
+0-7
+%a %s
+%b %g
+%c %sp
+%d %bp
+
+8-F
+%e %x
+%f %y
+%h %ex
+%l %ey
+---------------------------------
+lda ldb ldc ldd lds ldg ldsp lsbp
+lde ldf ldh ldl ldx ldy ldix ldiy
+
+lda (abs)
+
+---------------------------------
+
+00010000 11110110 10000011
+cmp               %e  %c
+
+com-file-sign: bytes $F2 "com/" $F2 $00
+com-file-full: reserve #96 bytes
+com-file-loaded: reserve #300 bytes
+
+------------------------------------------------------------
+GovnOS file structure
+
+#: (Z/) (root of the filesystem)
+  #com                                    Binaries
+    hw.bin
+    gsfetch.bin
+  #conf                                   Config/info files
+  #tmp                                    Temporary files
+  #user                                   User directory
+

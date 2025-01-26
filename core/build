@@ -1,0 +1,7 @@
+#!/bin/bash
+
+build() {
+  gcc core/main.c -Ilib -lSDL2 -o ../bin/gc16;
+}
+
+build;
