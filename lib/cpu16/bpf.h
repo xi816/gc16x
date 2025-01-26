@@ -20,7 +20,7 @@ U16 GC_GOVNODATE() {
 
   time(&rawtm);
   localtm = localtime(&rawtm);
-  return (localtm->tm_mday) + (localtm->tm_mon * 31) + (localtm->tm_year - 70);
+  return (localtm->tm_mday) + (localtm->tm_mon * 31) + (localtm->tm_year - 70) * 372;
 }
 
 U0 fatal(char* msg) {
