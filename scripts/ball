@@ -11,11 +11,11 @@ completed_state() {
 build_state() {
   print_state $1
   cd $2
-  ./build
+  ./build > /dev/null 2>&1
   cd - > /dev/null
 }
 
-mkdir bin
+mkdir -p bin
 build_state "gc16"        "core/"
 build_state "gasman"      "core/gasman/"
 build_state "gboot"       "core/gboot/"
