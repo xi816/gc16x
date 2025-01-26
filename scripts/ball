@@ -15,6 +15,7 @@ build_state() {
   cd - > /dev/null
 }
 
+mkdir bin
 build_state "gc16"        "core/"
 build_state "gasman"      "core/gasman/"
 build_state "gboot"       "core/gboot/"
