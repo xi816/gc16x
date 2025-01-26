@@ -152,6 +152,19 @@ putid:
   call inttostrl_clr
   ret
 
+zputi: ; Using bx,cx,dx,gi
+  ldc %ax
+  div %ax %bx
+  div %ax 10
+  add %dx $30
+  push %dx
+  int 2
+  lda %cx
+  cmp %bx 1
+  re
+  div %bx 10
+  jmp zputi
+
 ; strcmp - Check if two strings are equal
 ; Arguments:
 ; A - first string address
@@ -295,7 +308,7 @@ scani:
   lda $00
 .loop:
   int $01
-  pop %bi
+  pop %bx
 
   cmp %bx '0' ; Check if less than '0'
   jl .loop
@@ -475,7 +488,7 @@ fail:
   call puts
   hlt
 
-; com_govnos _ GovnOS Shell
+; com_govnos - GovnOS Shell
 com_govnos:
   lds welcome_msg
   call puts
@@ -603,6 +616,13 @@ com_govnos:
   call strcmp
   cmp %ax $00
   jme com_govnosEXEC_gsfetch
+
+  ; date
+  lda cline
+  ldb instFULL_date
+  call strcmp
+  cmp %ax $00
+  jme com_govnosEXEC_date
 
   ; Load the file from the disk (EXPERIMENTAL)
   call gfs_read_file
@@ -769,6 +789,46 @@ com_govnosEXEC_reboot:
   call puts
   jmp reboot
 
+com_govnosEXEC_date:
+  int 3
+  ; DX = date
+  lds %dx
+  ; Year
+  lda %si
+  div %ax 371
+  add %ax 1970
+  ldb 1000
+  call zputi
+
+  ldg *date_locale_delim
+  push %gi
+  int 2
+
+  ; Month
+  lda %si
+  div %ax 31
+  div %ax 12
+  lda %dx
+  inx %ax
+  ldb 10
+  call zputi
+
+  ldb *date_locale_delim
+  push %bx
+  int 2
+
+  ; Day
+  lda %si
+  div %ax 31
+  lda %dx
+  inx %ax
+  ldb 10
+  call zputi
+
+  push $0A
+  int 2
+  jmp com_govnos.aftexec
+
 ; Shutdown and termination
 fre:
   ldd $0000
@@ -795,8 +855,8 @@ st_msg:        bytes "Loading GovnOS ...$^@"
 exit_msg:      bytes "$Shutting down ...$^@"
 exit_term_msg: bytes "exit$^@"
 welcome_msg:   bytes "^[[92mGovnOS 0.0.3^[[0m$$"
-	             bytes "To get help, type 'help'$"
-	             bytes "To get OS release info, type 'info'$$^@"
+               bytes "To get help, type 'help'$"
+               bytes "To get OS release info, type 'info'$$^@"
 livecd_msg:    bytes "^[[91mLoaded from \"Live Floppy\" image$"
                bytes "Some commands using the GovnFS driver might not work^[[0m$^@"
 bschk:         bytes "Backspace$^@"
@@ -871,7 +931,8 @@ OS_RELEASE:    bytes "^[[96mGovnOS version 0.0.2 (alpha)$"
 errno:         reserve 1 bytes
 dynptr:        reserve 1 bytes
 
-locale_delim:  bytes ","
+date_locale_delim: bytes "-"
+locale_delim:      bytes ","
 
 ; GovnFS signatures
 com_file_sign: bytes $F2 "com/" $F2 $00
@@ -894,6 +955,7 @@ instFULL_retr: bytes "retr^@"
 instFULL_info: bytes "info^@"
 instFULL_drve: bytes "drive^@"
 instFULL_gsfc: bytes "gsfetch^@"
+instFULL_date: bytes "date^@"
 
 instFULL_echo: bytes "echo "
 bad_inst_msg:  bytes "Bad command.$^@"
@@ -903,4 +965,3 @@ cline:         reserve 64 bytes
 qptr:          reserve 1 bytes
 
 bootsecend:    bytes $AA $55
-
