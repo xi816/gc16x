@@ -1,9 +1,0 @@
-#!/bin/bash
-
-build () {
-  gcc main.c -I../../lib -o ../../bin/ugovnfs;
-}
-
-# Build
-build;
-

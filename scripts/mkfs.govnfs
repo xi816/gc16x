@@ -39,4 +39,3 @@ def mkfsmain(diskname):
   return 0;
 
 mkfsmain(diskname);
-

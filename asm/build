@@ -1,8 +1,0 @@
-#!/bin/bash
-
-build() {
-  gcc asm.c -I../lib -o ../ochkasm;
-}
-
-build;
-
