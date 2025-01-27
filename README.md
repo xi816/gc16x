@@ -12,7 +12,7 @@ Now you can start writing assembly code. For example, create a file called `test
 ```asm
 main:
   push $50
-  int $00
+  int 0
 ```
 and compile it with `kasm`: `./kasm test.asm test.bin`.
 
@@ -21,9 +21,9 @@ Now, you can run it using `./gc16 test.bin`. Congratulations, you compiled GovnA
 
 ## Compile GovnOS
 To compile and run GovnOS on GC16X, type:
-```
-newdisk name.img
-rom-load-govnos name.img
-run-govnos name.img
+```shell
+./newdisk name.img
+./rom-load-govnos name.img
+./run-govnos name.img
 ```
 

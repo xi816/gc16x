@@ -1326,23 +1326,23 @@ U0 StackDump(GC* gc, U16 c) {
 }
 
 U0 RegDump(GC* gc) {
-  printf("\033[11A\033[10CAX %04X\n",   gc->AX);
-  printf("\033[10CBX %04X\n",           gc->BX);
-  printf("\033[10CCX %04X\n",           gc->CX);
-  printf("\033[10CDX %04X\n",           gc->DX);
-  printf("\033[10CSI %04X ASCII: %c\n", gc->SI, gc->SI);
-  printf("\033[10CGI %04X ASCII: %c\n", gc->GI, gc->GI);
-  printf("\033[10CEX %04X\n",           gc->EX);
-  printf("\033[10CFX %04X\n",           gc->FX);
-  printf("\033[10CHX %04X\n",           gc->HX);
-  printf("\033[10CLX %04X\n",           gc->LX);
-  printf("\033[10CX  %04X\n",           gc->X);
-  printf("\033[10CY  %04X\n",           gc->Y);
-  printf("\033[10CIX %04X ASCII: %c\n", gc->IX, gc->IX);
-  printf("\033[10CIY %04X ASCII: %c\n", gc->IY, gc->IY);
-  printf("\033[10CSP %04X\n",           gc->SP);
-  printf("\033[10CBP %04X\n",           gc->BP);
-  printf("\033[10CPC %04X\n",           gc->PC);
+  printf("\033[11A\033[10CAX %04X\n",   gc->AX.word);
+  printf("\033[10CBX %04X\n",           gc->BX.word);
+  printf("\033[10CCX %04X\n",           gc->CX.word);
+  printf("\033[10CDX %04X\n",           gc->DX.word);
+  printf("\033[10CSI %04X ASCII: %c\n", gc->SI.word, gc->SI.word);
+  printf("\033[10CGI %04X ASCII: %c\n", gc->GI.word, gc->GI.word);
+  printf("\033[10CEX %04X\n",           gc->EX.word);
+  printf("\033[10CFX %04X\n",           gc->FX.word);
+  printf("\033[10CHX %04X\n",           gc->HX.word);
+  printf("\033[10CLX %04X\n",           gc->LX.word);
+  printf("\033[10CX  %04X\n",           gc->X.word);
+  printf("\033[10CY  %04X\n",           gc->Y.word);
+  printf("\033[10CIX %04X ASCII: %c\n", gc->IX.word, gc->IX.word);
+  printf("\033[10CIY %04X ASCII: %c\n", gc->IY.word, gc->IY.word);
+  printf("\033[10CSP %04X\n",           gc->SP.word);
+  printf("\033[10CBP %04X\n",           gc->BP.word);
+  printf("\033[10CPC %04X\n",           gc->PC.word);
   printf("\033[10CPS %08b\n",           gc->PS);
   printf("\033[10C   -I---ZNC\033[0m\n");
 }
