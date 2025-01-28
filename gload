@@ -1,0 +1,44 @@
+#!/usr/bin/python3
+import sys;
+
+def main(argc: int, argv: list):
+  if (argc < 4):
+    print("gload: not enough arguments");
+    return 1;
+  with open(argv[1], "rb") as fl:
+    dest = bytearray(fl.read());
+  with open(argv[2], "rb") as fl:
+    src = fl.read();
+  startaddr = dest.find(0xF7);
+  dest[startaddr] = 0xF1;
+  startaddr += 1;
+  for byte in argv[3].encode():
+    dest[startaddr] = byte;
+    startaddr += 1;
+  for byte in b"\xF2com/\xF2\x00":
+    dest[startaddr] = byte;
+    startaddr += 1;
+
+  E0_encoded = 0;
+  for byte in src:
+    if (E0_encoded):
+      dest[startaddr+1] = byte+0xE0;
+      startaddr += 1;
+      continue;
+    if (byte != 0xE0):
+      dest[startaddr] = byte;
+      startaddr += 1;
+    else:
+      E0_encoded = 1;
+      startaddr += 1;
+      continue;
+  dest[startaddr] = 0xF1;
+  startaddr += 1;
+  dest[startaddr] = 0xF7;
+  startaddr += 1;
+  with open(argv[1], "wb") as disk:
+    disk.write(dest);
+
+  return 0;
+
+sys.exit(main(len(sys.argv), sys.argv));

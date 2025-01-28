@@ -54,11 +54,10 @@ strtok:
 ; (also affects dynptr)
 dstrtok:
   ldds
+  cmp %ax %bx
+  re
   inx %si
-  ldc %ax
-  sub %cx %bx
-  loop strtok
-  ret
+  jmp dstrtok
 
 ; inttostr - Convert a 16_bit integer into a string
 ; Arguments:
@@ -224,14 +223,20 @@ pstrcmp:
 ; A - status
 dstrcmp:
   ldds
-  ldb *%gi
-  cmp %ax %bx
-  jmne .fail
-  cmp %gi $00
-  jme .eq
+
+  push %gi
+  lodgb
+  ldb %gi
+  pop %gi
+
   inx %si
   inx %gi
-  jmp strcmp
+
+  cmp %ax %bx
+  jmne .fail
+  cmp %bx $00
+  jme .eq
+  jmp dstrcmp
 .eq:
   lda $00
   ret
@@ -289,16 +294,19 @@ strcpy:
 ; G - address to the string{mem}
 ; At the end, S should point to the end of that string on the disk
 dstrsubset:
-  lda *%gi
-  call dstrtok ; Load si with the address to the first character (stored in ax)
-  push %si
   push %gi
-  call dstrcmp
+  lodgb
+  ldb %gi
   pop %gi
-  pop %si
 
-  cmp %ax $00 ; We found the substring (address in si)
-  re
+  call dstrtok ; Load si with the address to the first character (stored in ax)
+  call dstrcmp ; Compare and store the status into ax
+    cmp %ax $00 ; We found the substring (address in si)
+    re
+  ; pop %gi
+  ; pop %si
+  inx %si
+
   jmp dstrsubset
 
 ; scani - Scan an integer from standard input
@@ -424,29 +432,41 @@ drive_letter:    reserve 1 bytes
 gfs_read_file:
   lds com_file_full
   str $F1 ; Load $F1 into com_file_full[0]
-  lda com_file_predef
   ldb %si
   call strcpy ; Load filename into com_file_full
   lda com_file_sign ; Load file signature into com_file_full
   call strcpy
 
-  lda $0020
-  ldb com_file_full
+  lds $001F
+  ldg com_file_full
   call dstrsubset
 
-  lds com_file_full
-  ldg $3000              ; load the file into $3000
-  ; call flcpy (s -> src{disk}, g -> dst{mem})
+  ldg %dx                ; load the file into *%dx
+  call flcpy
   ret
 
 ; flcpy - Copy the file contents into memory (assuming
 ; %si is already loaded with the disk address to the file)
 ; Arguments:
-; S - file contents disk address
-; G
+; si - file contents address{disk}
+; dx - address where the file will be loaded{mem}
 flcpy:
-  lds kp_1_1msg
-  jmp fail
+  ldds
+  cmp %ax $F1
+  re
+  cmp %ax $E0
+  jme .strange
+.normie:
+  stgrb %ax
+  jmp .next
+.strange:
+  add %ax $E0
+  stgrb %ax
+  jmp .next
+.next:
+  inx %si
+  inx %gi
+  jmp flcpy
 
 ; Boot GovnOS
 boot:
@@ -624,12 +644,15 @@ com_govnos:
   cmp %ax $00
   jme com_govnosEXEC_date
 
-  ; Load the file from the disk (EXPERIMENTAL)
+  ; Load the file from the disk
+  lda cline
+  ldd $3000
   call gfs_read_file
+  call $3000
 
   ; Otherwise it's a bad instruction
-  lds bad_inst_msg
-  call puts
+  ; lds bad_inst_msg
+  ; call puts
 .aftexec:
   jmp .prompt
 
@@ -938,7 +961,6 @@ locale_delim:      bytes ","
 ; GovnFS signatures
 com_file_sign: bytes $F2 "com/" $F2 $00
 com_file_full: reserve 96 bytes
-com_file_predef: bytes "kernel.bin^@"
 
 ; Control sequences
 bs_seq:        bytes "^H ^H^@"

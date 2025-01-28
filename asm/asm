@@ -57,6 +57,11 @@ def PrintLabs(labs: dict):
   for i in labs:
     print(f"{i+':': <30}${hex(labs[i])[2:].upper():0>4}");
 
+def OffsetLabs(labs: dict, offset: int):
+  for i in labs:
+    labs[i] += offset;
+  return labs;
+
 # Lexer:
 def Lex(prog: str, filename: str):
   prog += "\n\0";
@@ -234,7 +239,7 @@ def FetchLabels(prog: list, disk: bool):
   labs = dict();
   for i in prog:
     if (i[0] == T_LAB):
-      labs[i[1]] = i[2]+(0x91EE*disk);
+      labs[i[1]] = i[2]+(0x3000*disk);
   return labs;
 
 def RemEmpty(prog: str):
@@ -541,12 +546,20 @@ def Parse(toks: list) -> list:
           ast.append([ASTINS, "call:b", toks[pos+1][1], pc]);
           pc += 3;
           pos += 2;
+        elif (toks[pos+1][0] == T_INT): # CALL Absolute(int)
+          ast.append([ASTINS, "call:a", toks[pos+1][1], pc]);
+          pc += 3;
+          pos += 2;
         else:
           print("No. CALL");
           exit(1);
       elif (toks[pos][1] == "jmp"): # JMP
-        if (toks[pos+1][0] == T_0ID): # JMP Absolute
+        if (toks[pos+1][0] == T_0ID): # JMP Absolute(label)
           ast.append([ASTINS, "jmp:b", toks[pos+1][1], pc]);
+          pc += 4;
+          pos += 2;
+        elif (toks[pos+1][0] == T_INT): # JMP Absolute
+          ast.append([ASTINS, "jmp:a", toks[pos+1][1], pc]);
           pc += 4;
           pos += 2;
         else:
@@ -1041,12 +1054,23 @@ def CompileGC16X(prog: list, labs: dict):
         code.append(val % 256);
         code.append(val >> 8);
         pos += 1;
+      elif (prog[pos][1] == "call:a"): # CALL ADDR16(INT)
+        code.append(0xC7);
+        code.append(prog[pos][2] % 256);
+        code.append(prog[pos][2] >> 8);
+        pos += 1;
       elif (prog[pos][1] == "jmp:b"): # JMP ADDR16
         code.append(0x0F);
         code.append(0x30);
         val = labs[prog[pos][2]];
         code.append(val % 256);
         code.append(val >> 8);
+        pos += 1;
+      elif (prog[pos][1] == "jmp:a"): # JMP ADDR16(INT)
+        code.append(0x0F);
+        code.append(0x30);
+        code.append(prog[pos][2] % 256);
+        code.append(prog[pos][2] >> 8);
         pos += 1;
       elif (prog[pos][1] == "jl:b"): # JL ADDR16
         code.append(0x0F);
@@ -1179,6 +1203,8 @@ def main(argc: int, argv: list) -> int:
     exit(tokens);
   # PrintTokens(tokens);
   ast, labs = Parse(tokens);
+  if (diskmode):
+    labs = OffsetLabs(labs, 0x3000);
   # PrintAst(ast);
   PrintLabs(labs);
   c, exitcode = CompileGC16X(ast, labs);
