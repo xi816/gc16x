@@ -16,9 +16,9 @@ def mkfsheader(disk, ds): #                                           v
                                                                     # Filesystem name (11 bytes)
   for i in range(4): disk.write(bytes((randint(0,255),)));          # Serial number (4 bytes)
   disk.write(bytes((ds%256,)));                                     # Disk size in sectors (1 byte)
-  dl = bytes((input("Drive letter: ").encode()[0],));               # Disk letter (1 byte)
-  if (dl not in range(65, 91)): dl = b"A";                          # and....
-  disk.write(dl);                                                   # AAAAAAAAAAND
+  dl = input("Drive letter: ").encode()[0];                         # Disk letter (1 byte)
+  if (dl not in range(65, 91)): dl = 0x41;                          # and....
+  disk.write(bytes((dl,)));                                         # AAAAAAAAAAND
   disk.write(bytes(14));                                            # Reserved (14 bytes)
   disk.write(bytes((0xF7,)));                                       # Disk end signature
   return 0;
