@@ -34,7 +34,7 @@ DIGEXT = "0123456789ABCDEF";
 KEY2   = [
   "lda", "ldb", "ldc", "ldd", "lds", "ldg", "push", "int", "lodsb", "lodgb", "cmp", "inx", "dex", "jme", "jmne", "ret", "jmp",
   "call", "nop", "loop", "cop", "storb", "stgrb", "cpuid", "hlt", "pop", "add", "sub", "div", "brk", "ldds", "re", "rne", "mul",
-  "trap", "jl", "jle", "jg", "jge", "str", "mov"
+  "trap", "jl", "jle", "jg", "jge", "str", "mov", "mb", "mw"
 ];
 KEYR   = [
   "ax", "bx", "cx", "dx", "si", "gi", "sp", "bp",
@@ -275,7 +275,31 @@ def Parse(toks: list) -> list:
           pc += 2;
           pos += 3;
         else:
-          print("Unknown lda operand");
+          print("Unknown mov operand");
+          exit(1);
+      elif (toks[pos][1] == "mb"): # MB
+        if (toks[pos+2][0] == T_INT): # MB m16 imm8
+          ast.append([ASTINS, "mb:a", (toks[pos+1][1], toks[pos+2][1]), pc]);
+          pc += 4;
+          pos += 3;
+        elif (toks[pos+2][0] == T_REG): # MB m16 reg16
+          ast.append([ASTINS, "mb:r", (toks[pos+1][1], toks[pos+2][1]), pc]);
+          pc += 4;
+          pos += 3;
+        else:
+          print("Unknown mb operand");
+          exit(1);
+      elif (toks[pos][1] == "mw"): # MW
+        if (toks[pos+2][0] == T_INT): # MW m16 imm16
+          ast.append([ASTINS, "mw:a", (toks[pos+1][1], toks[pos+2][1]), pc]);
+          pc += 5;
+          pos += 3;
+        elif (toks[pos+2][0] == T_REG): # MW m16 reg16
+          ast.append([ASTINS, "mw:r", (toks[pos+1][1], toks[pos+2][1]), pc]);
+          pc += 5;
+          pos += 3;
+        else:
+          print("Unknown mb operand");
           exit(1);
       elif (toks[pos][1] == "lda"): # LDA
         if (toks[pos+1][0] == T_INT): # LDA immediate
@@ -765,6 +789,12 @@ def CompileGC16X(prog: list, labs: dict):
         val = labs[prog[pos][2][1]];
         code.append(val % 256);
         code.append(val >> 8);
+        pos += 1;
+      elif (prog[pos][1] == "mb:a"): # MV m16 imm8
+        code.append(0xC0);
+        code.append(prog[pos][2][0] % 256);
+        code.append(prog[pos][2][0] >> 8);
+        code.append(prog[pos][2][1] % 256);
         pos += 1;
       elif (prog[pos][1] == "lda:a"): # LDA immediate
         code.append(0x40);

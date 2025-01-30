@@ -49,7 +49,7 @@ U8 main(I32 argc, I8** argv) {
   // Create a virtual CPU
   GC gc;
   gc.pin = 0b00000000; // Reset the pin
-  Reset(&gc, driveboot);
+  Reset(&gc);
 
   if (!driveboot) { // Load a memory dump
     FILE* fl = fopen(argv[1], "rb");
@@ -101,4 +101,3 @@ U8 main(I32 argc, I8** argv) {
   return exec_errno;
 
 }
-

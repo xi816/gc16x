@@ -54,10 +54,18 @@ strtok:
 ; (also affects dynptr)
 dstrtok:
   ldds
+  cmp %ax $F7 ; End of the disk
+  jme .error
   cmp %ax %bx
-  re
+  jme .done
   inx %si
   jmp dstrtok
+.error:
+  ldb $01
+  ret
+.done:
+  ldb $00
+  ret
 
 ; inttostr - Convert a 16_bit integer into a string
 ; Arguments:
@@ -171,10 +179,8 @@ zputi: ; Using bx,cx,dx,gi
 ; Returns:
 ; A - status
 strcmp:
-  lds %ax
-  ldg %bx
-  lodsb
-  lodgb
+  lds *%ax
+  ldg *%bx
   cmp %si %gi
   jmne .fail
   cmp %si $00
@@ -197,10 +203,8 @@ strcmp:
 ; Returns:
 ; A - status
 pstrcmp:
-  lds %ax
-  ldg %bx
-  lodsb
-  lodgb
+  lds *%ax
+  ldg *%bx
   cmp %si %gi
   jmne .fail
   cmp %si %cx
@@ -222,12 +226,9 @@ pstrcmp:
 ; Returns:
 ; A - status
 dstrcmp:
+  trap
   ldds
-
-  push %gi
-  lodgb
-  ldb %gi
-  pop %gi
+  ldb *%gi
 
   inx %si
   inx %gi
@@ -264,8 +265,7 @@ strnul:
 ; B - Destination
 ; C - Number of bytes to copy
 memcpy:
-  lds %ax
-  lodsb
+  lds *%ax
   ldg %bx
   stgrb %si
   inx %ax
@@ -278,8 +278,7 @@ memcpy:
 ; A - Target
 ; B - Destination
 strcpy:
-  lds %ax
-  lodsb
+  lds *%ax
   ldg %bx
   cmp %si $00 ; Target has no more bytes to copy
   re
@@ -294,20 +293,29 @@ strcpy:
 ; G - address to the string{mem}
 ; At the end, S should point to the end of that string on the disk
 dstrsubset:
-  push %gi
-  lodgb
-  ldb %gi
-  pop %gi
+  ldb *%gi
 
   call dstrtok ; Load si with the address to the first character (stored in ax)
+    cmp %bx $01
+    jme .fnf
+  push %si
   call dstrcmp ; Compare and store the status into ax
+    trap
     cmp %ax $00 ; We found the substring (address in si)
-    re
-  ; pop %gi
-  ; pop %si
+    jme .end
+  pop %si
   inx %si
 
   jmp dstrsubset
+.end: ; File found
+  pop %x
+  ldb $00 ; Success status for an outer function
+  ret
+.fnf: ; File not found
+  lds fnf_msg
+  call puts
+  ldb $01 ; Error status for an outer function
+  ret
 
 ; scani - Scan an integer from standard input
 ; Returns:
@@ -440,16 +448,19 @@ gfs_read_file:
   lds $001F
   ldg com_file_full
   call dstrsubset
+    cmp %bx $01 ; Check for disk end
+    re
 
   ldg %dx                ; load the file into *%dx
   call flcpy
+  ldb $00
   ret
 
 ; flcpy - Copy the file contents into memory (assuming
 ; %si is already loaded with the disk address to the file)
 ; Arguments:
 ; si - file contents address{disk}
-; dx - address where the file will be loaded{mem}
+; gi - address where the file will be loaded{mem}
 flcpy:
   ldds
   cmp %ax $F1
@@ -460,6 +471,8 @@ flcpy:
   stgrb %ax
   jmp .next
 .strange:
+  inx %si
+  ldds
   add %ax $E0
   stgrb %ax
   jmp .next
@@ -648,6 +661,8 @@ com_govnos:
   lda cline
   ldd $3000
   call gfs_read_file
+    cmp %bx $01
+    jme com_govnosEXEC_dir
   call $3000
 
   ; Otherwise it's a bad instruction
@@ -810,7 +825,7 @@ com_govnosEXEC_exit:
 com_govnosEXEC_reboot:
   lds cls_seq
   call puts
-  jmp reboot
+  int 4
 
 com_govnosEXEC_date:
   int 3
@@ -902,6 +917,7 @@ fre00_msg:     bytes " bytes free$^@"
 dir00_msg:     bytes "Drive ^@"
 dir01_msg:     bytes "$Contents of the drive:$  no shit make the driver first$^@"
 color00_msg:   bytes "Enter the color number (0-7): ^@"
+fnf_msg:       bytes "Bad filename.$^@"
 ; GSFETCH
 gsfc_stM:      bytes "             ^[[97mgsfetch$^[[0m             ---------$^@"
 gsfc_hostM:    bytes "             ^[[97mHost: ^[[0m^@"

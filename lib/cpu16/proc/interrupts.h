@@ -3,6 +3,7 @@
 #define INT_READ         0x01 // push char to stack
 #define INT_WRITE        0x02 // write char from stack
 #define INT_DATE         0x03 // get date to dx register
+#define INT_RESET        0x04 // reset the CPU
 
 // Videobuffer
 #define INT_VIDEO_WRITE  0x0C // set vga[si] to ax

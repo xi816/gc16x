@@ -13,4 +13,5 @@ main:
   call puts
   ret
 
-hw_kernel: bytes "Hello from Kernel!$THE GOVNKERNEL!!!$^@"
+hw_kernel: bytes "Hello from Game!$THE GOVNGAME!!!$^@"
+
