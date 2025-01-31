@@ -226,7 +226,6 @@ pstrcmp:
 ; Returns:
 ; A - status
 dstrcmp:
-  trap
   ldds
   ldb *%gi
 
@@ -292,19 +291,19 @@ strcpy:
 ; S - address{disk}
 ; G - address to the string{mem}
 ; At the end, S should point to the end of that string on the disk
+
 dstrsubset:
   ldb *%gi
 
   call dstrtok ; Load si with the address to the first character (stored in ax)
     cmp %bx $01
     jme .fnf
-  push %si
+  push %gi
   call dstrcmp ; Compare and store the status into ax
-    trap
     cmp %ax $00 ; We found the substring (address in si)
     jme .end
-  pop %si
-  inx %si
+  pop %gi
+  dex %si
 
   jmp dstrsubset
 .end: ; File found
@@ -437,6 +436,7 @@ drive_letter:    reserve 1 bytes
 ; D - directory
 ; G - filename
 ; S - address to store data from a file
+
 gfs_read_file:
   lds com_file_full
   str $F1 ; Load $F1 into com_file_full[0]
@@ -662,7 +662,7 @@ com_govnos:
   ldd $3000
   call gfs_read_file
     cmp %bx $01
-    jme com_govnosEXEC_dir
+    jme .aftexec
   call $3000
 
   ; Otherwise it's a bad instruction
@@ -917,7 +917,7 @@ fre00_msg:     bytes " bytes free$^@"
 dir00_msg:     bytes "Drive ^@"
 dir01_msg:     bytes "$Contents of the drive:$  no shit make the driver first$^@"
 color00_msg:   bytes "Enter the color number (0-7): ^@"
-fnf_msg:       bytes "Bad filename.$^@"
+fnf_msg:       bytes "Bad command or file name.$^@"
 ; GSFETCH
 gsfc_stM:      bytes "             ^[[97mgsfetch$^[[0m             ---------$^@"
 gsfc_hostM:    bytes "             ^[[97mHost: ^[[0m^@"
@@ -997,7 +997,6 @@ instFULL_gsfc: bytes "gsfetch^@"
 instFULL_date: bytes "date^@"
 
 instFULL_echo: bytes "echo "
-bad_inst_msg:  bytes "Bad command.$^@"
 
 ; Buffers
 cline:         reserve 64 bytes
