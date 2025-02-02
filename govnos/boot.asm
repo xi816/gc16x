@@ -293,7 +293,6 @@ strcpy:
 ; At the end, S should point to the end of that string on the disk
 dstrsubset:
   ldb *%gi
-  trap
 
   call dstrtok ; Load si with the address to the first character (stored in ax)
     cmp %bx $01
@@ -444,6 +443,9 @@ gfs_read_file:
   call strcpy ; Load filename into com_file_full
   lda com_file_sign ; Load file signature into com_file_full
   call strcpy
+  lds %bx
+  str $00 ; Load $00 into com_file_full so it doesn't include the
+          ; past query
 
   lds $001F
   ldg com_file_full
