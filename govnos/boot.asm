@@ -911,7 +911,7 @@ com_govnos.term:
 st_msg:        bytes "Loading GovnOS ...$^@"
 exit_msg:      bytes "$Shutting down ...$^@"
 exit_term_msg: bytes "exit$^@"
-welcome_msg:   bytes "^[[92mGovnOS 0.0.3^[[0m$$"
+welcome_msg:   bytes "^[[92mGovnOS 0.0.4^[[0m$$"
                bytes "To get help, type 'help'$"
                bytes "To get OS release info, type 'info'$$^@"
 livecd_msg:    bytes "^[[91mLoaded from \"Live Floppy\" image$"
