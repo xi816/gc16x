@@ -303,6 +303,10 @@ U8 CPUID(GC* gc) {
       gc->DX.word = (U16)MEMSIZE;
       break;
     }
+    case 0x0003: { // Get disk size (0 for 65,536 bytes and then looping back)
+      gc->DX.word = (U16)ROMSIZE;
+      break;
+    }
     default:
       fprintf(stderr, "Illegal CPUID value: %04X\n", gc->DX.word);
       return 1;

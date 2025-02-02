@@ -118,6 +118,8 @@ inttostrl:
   jmne .loop
   ret
 .putdelim:    ; Put the delimiter
+  cmp %ax $00
+  re
   lds %gi
   storb %bx
   dex %gi
@@ -457,6 +459,12 @@ gfs_read_file:
   call flcpy
   ldb $00
   ret
+gfs_disk_space:
+  lds $0020
+  ldb $F7
+  call dstrtok
+  lda %si
+  ret
 
 ; flcpy - Copy the file contents into memory (assuming
 ; %si is already loaded with the disk address to the file)
@@ -790,6 +798,26 @@ com_govnosEXEC_gsfetch_end:
   lds gsfc_memO
   call puts
 
+  lds gsfc_diskM
+  call puts
+
+  call gfs_disk_space
+  add %ax 21
+  ldb *locale_delim
+  call putid
+  lds gsfc_diskN
+  call puts
+
+  ldd $03 ; Get disk size
+  cpuid
+  lda %dx
+  dex %ax ; in case of disk size being 65,536 (0)
+  div %ax, 1024
+  inx %ax ; maybe
+  call puti
+  lds gsfc_memO
+  call puts
+
   lds gsfc_backM ; Logo
   call puts
 
@@ -858,7 +886,6 @@ com_govnosEXEC_date:
   int 2
   jmp com_govnos.aftexec
 
-; Shutdown and termination
 fre:
   ldd $0000
   ldb bootsecend
@@ -872,6 +899,7 @@ fre:
   call puts
   ret
 
+; Shutdown and termination
 com_govnos.shutdown:
   lds exit_msg
   call puts
@@ -915,9 +943,11 @@ gsfc_hostM:    bytes "             ^[[97mHost: ^[[0m^@"
 gsfc_osM:      bytes "$             ^[[97mOS: ^[[0m^@"
 gsfc_cpuM:     bytes "$             ^[[97mCPU: ^[[0m^@"
 gsfc_memM:     bytes "             ^[[97mMemory: ^[[0m^@"
+gsfc_diskM:    bytes "             ^[[97mDisk space: ^[[0m^@"
 gsfc_memN:     bytes "KB/^@"
 gsfc_memO:     bytes "KB$^@"
-gsfc_backM:    bytes "^[[6A^[[33m  .     . .$"
+gsfc_diskN:    bytes "B/^@"
+gsfc_backM:    bytes "^[[7A^[[33m  .     . .$"
                bytes            "     A     .$"
                bytes            "    (=) .$"
                bytes            "  (=====)$"
