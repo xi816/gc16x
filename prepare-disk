@@ -16,12 +16,14 @@ govnos-load() {
   printf "Loading GovnOS into %s...\n" $1
   ./gboot $1 govnos/boot.bin
   ./gload $1 govnos/kernel.bin "kernel.bin"
+  ./gload $1 govnos/info.bin "info"
 }
 
 # Compile GovnOS
 compile-govnos() {
   ./kasm govnos/boot.asm govnos/boot.bin
   ./kasm -d govnos/kernel.asm govnos/kernel.bin
+  ./kasm -d govnos/info.asm govnos/info.bin
 }
 
 # Start

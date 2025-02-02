@@ -534,6 +534,7 @@ com_govnos:
   ; Change the PS1 (shell prompt) to show
   ; the actual current drive
   lds env_PS
+  add %si 5
   ldb *drive_letter
   storb %bx
 
@@ -630,13 +631,6 @@ com_govnos:
   call strcmp
   cmp %ax $00
   jme com_govnosEXEC_reboot
-
-  ; info
-  lda cline
-  ldb instFULL_info
-  call strcmp
-  cmp %ax $00
-  jme com_govnosEXEC_info
 
   ; drive
   lda cline
@@ -814,11 +808,6 @@ com_govnosEXEC_echo:
   int $02
   jmp com_govnos.aftexec
 
-com_govnosEXEC_info:
-  lds OS_RELEASE
-  call puts
-  jmp com_govnos.aftexec
-
 com_govnosEXEC_exit:
   lds exit_term_msg
   call puts
@@ -958,16 +947,10 @@ drvDSC_msg:    bytes "Disk disconnected, A/ is an empty byte stream.$"
 
 ; Environment variables
 ; 11 bytes
-env_PS:        bytes " /^$ ^@^@^@^@^@^@^@"
+env_PS:        bytes "^[[93m />^[[0m ^@"
 env_PCNAME:    bytes "GovnPC Ultra^@^@^@^@"
 ; Constant environment variables
-envc_OSNAME:   bytes "GovnOS 0.0.2^@^@^@^@"
-
-; Info
-OS_RELEASE:    bytes "^[[96mGovnOS version 0.0.2 (alpha)$"
-               bytes "Release date: 01/12/2025$"
-               bytes "$(c) Xi816, 2025"
-               bytes "^[[0m$^@"
+envc_OSNAME:   bytes "GovnOS 0.0.4^@^@^@^@"
 
 ; Data
 errno:         reserve 1 bytes
