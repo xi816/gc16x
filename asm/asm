@@ -115,16 +115,15 @@ def Lex(prog: str, filename: str):
       pos += 1;
       if (buf in KEYR):
         toks.append((T_REG, KEYR.index(buf)));
-        # cpos += 1;
       else:
         print(f"kasm: {filename}:{linenum}:1: Unknown register {buf}");
         exit(1);
       buf = "";
+      pos -= 1;
     elif (prog[pos] in DIG):
       while (prog[pos] in DIG):
         buf += prog[pos];
         pos += 1;
-      pos += 1;
       toks.append((T_INT, int(buf, base=10)));
       buf = "";
     elif (prog[pos] == "\""):

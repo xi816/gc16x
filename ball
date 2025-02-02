@@ -16,7 +16,6 @@ build_state "gc16"        "./"
 build_state "gasman"      "core/gasman/"
 build_state "gboot"       "core/gboot/"
 build_state "ugovnfs"     "core/ugovnfs/"
-build_state "GovnOS"      "govnos/"
 echo
 completed_state
 

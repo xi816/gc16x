@@ -2,13 +2,11 @@ reboot: jmp boot
 
 ; GovnFS signature bytes that are not allowed in code:
 ; F0, F1, F2, F7
-; F0 -- Directory block
 ; F1 -- File block
 ; F2 -- Group block
 ; F7 -- Disk end
 ;
-; Dir: F0 [name] F0
-; File: F1 [filename] F2 [dir] F2 [contents] F1
+; File: F1 [filename] F2 [tag] F2 [contents] F1
 
 ; write - Output the buffer
 ; Arguments:
@@ -464,6 +462,7 @@ gfs_disk_space:
   ldb $F7
   call dstrtok
   lda %si
+  inx %ax
   ret
 
 ; flcpy - Copy the file contents into memory (assuming
@@ -498,8 +497,6 @@ boot:
   ; hlt
 boot_start:
   ; Find the current CPU
-  lds procchk_msg
-  call puts
   ldd $00
   cpuid
   cmp %dx $00
@@ -802,7 +799,6 @@ com_govnosEXEC_gsfetch_end:
   call puts
 
   call gfs_disk_space
-  add %ax 21
   ldb *locale_delim
   call putid
   lds gsfc_diskN
@@ -812,7 +808,7 @@ com_govnosEXEC_gsfetch_end:
   cpuid
   lda %dx
   dex %ax ; in case of disk size being 65,536 (0)
-  div %ax, 1024
+  div %ax 1024
   inx %ax ; maybe
   call puti
   lds gsfc_memO
@@ -908,12 +904,13 @@ com_govnos.term:
   int $00
 
 ; Text
-st_msg:        bytes "Loading GovnOS ...$^@"
+st_msg:        bytes "GovnBoot bootloader$^@"
 exit_msg:      bytes "$Shutting down ...$^@"
 exit_term_msg: bytes "exit$^@"
-welcome_msg:   bytes "^[[92mGovnOS 0.0.4^[[0m$$"
-               bytes "To get help, type 'help'$"
-               bytes "To get OS release info, type 'info'$$^@"
+welcome_msg:   bytes "$"
+               ; bytes "To get help, type 'help'$"
+               ; bytes "To get OS release info, type 'info'$$^@"
+               bytes "Load the kernel by typing `kernel.bin`$^@"
 livecd_msg:    bytes "^[[91mLoaded from \"Live Floppy\" image$"
                bytes "Some commands using the GovnFS driver might not work^[[0m$^@"
 bschk:         bytes "Backspace$^@"
@@ -964,7 +961,6 @@ kp_6_0msg:     bytes "Kernel panic: Triggered halt(6,0)$^@"
 kp_41_0msg:    bytes "Kernel panic: Kernel error(41,0)$^@"
 
 ; CPU types
-procchk_msg:   bytes "Checking CPU ...$^@"
 proc_00_msg:   bytes "CPU: ^[[32mGovno Core 16X^[[0m$$^@"
 proc_unk_msg:  bytes "CPU: ^[[31mUnknown^[[0m$$^@"
 proc_00M:      bytes "Govno Core 16X$^@"
