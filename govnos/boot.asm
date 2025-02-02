@@ -291,9 +291,9 @@ strcpy:
 ; S - address{disk}
 ; G - address to the string{mem}
 ; At the end, S should point to the end of that string on the disk
-
 dstrsubset:
   ldb *%gi
+  trap
 
   call dstrtok ; Load si with the address to the first character (stored in ax)
     cmp %bx $01
@@ -301,7 +301,7 @@ dstrsubset:
   push %gi
   call dstrcmp ; Compare and store the status into ax
     cmp %ax $00 ; We found the substring (address in si)
-    jme .end
+  jme .end
   pop %gi
   dex %si
 

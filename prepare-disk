@@ -1,0 +1,34 @@
+#!/usr/bin/bash
+
+# prepare-disk: Create a bootable GovnOS disk
+# using GovnFS 1.3 filesystem
+
+# Format a disk
+format-disk() {
+  printf "Formatting %s...\n" $1
+  touch $1
+  truncate $1 -s 64k
+  ./mkfs.govnfs $1
+}
+
+# Load GovnOS into a bootable sector
+govnos-load() {
+  printf "Loading GovnOS into %s...\n" $1
+  ./gboot $1 govnos/boot.bin
+  ./gload $1 govnos/kernel.bin "kernel.bin"
+}
+
+# Compile GovnOS
+compile-govnos() {
+  ./kasm govnos/boot.asm govnos/boot.bin
+  ./kasm -d govnos/kernel.asm govnos/kernel.bin
+}
+
+# Start
+format-disk $1
+read -p "Recompile GovnOS? (y/n) " -n 1 -r; echo
+if [[ $REPLY =~ ^[Yy]$ ]]; then
+  compile-govnos $1
+fi
+govnos-load $1
+printf "Disk ready\n"

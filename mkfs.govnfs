@@ -28,14 +28,14 @@ def mkfsfill(disk, ds):
   return 0;
 
 def mkfsmain(diskname):
-  print("mkfs.govnfs 1.1");
+  # print("mkfs.govnfs 1.1");
   ds = mkfsdisksize(diskname);
   disk = open(diskname, "wb");
 
-  print(f"blocks read: {ds//512}");
+  # print(f"blocks read: {ds//512}");
   mkfsheader(disk, ds//512);
   mkfsfill(disk, ds);
-  print(f"blocks written: {ds//512}");
+  # print(f"blocks written: {ds//512}");
   disk.close();
   return 0;
 

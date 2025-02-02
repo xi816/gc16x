@@ -246,7 +246,7 @@ def RemEmpty(prog: str):
   return "\n".join([i for i in prog.split("\n") if i]);
 
 # Parser:
-def Parse(toks: list) -> list:
+def Parse(toks: list, filename: str) -> list:
   labels: dict = {};
   ast:    list = [];
   pos:    int  = 0;
@@ -755,7 +755,7 @@ def Parse(toks: list) -> list:
       print(f"Wtf is token {toks[pos][0]} at {pos}");
       exit(1);
   ast.append([ASTEOF, 0, 0, pc]);
-  print(f"program size: {ast[-1][3]} bytes");
+  print(f"{filename}: program size: {pc} bytes");
   return ast, labels;
 
 # Compiler:
@@ -1231,12 +1231,10 @@ def main(argc: int, argv: list) -> int:
   if (type(tokens[1]) is int):
     print("Fatal error. Can't compile");
     exit(tokens);
-  # PrintTokens(tokens);
-  ast, labs = Parse(tokens);
+  ast, labs = Parse(tokens, progname);
   if (diskmode):
     labs = OffsetLabs(labs, 0x3000);
-  # PrintAst(ast);
-  PrintLabs(labs);
+  # PrintLabs(labs);
   c, exitcode = CompileGC16X(ast, labs);
   with open(outname, "wb") as fl:
     fl.write(c);

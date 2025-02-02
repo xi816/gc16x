@@ -25,24 +25,24 @@ I8 status(bool stat) {
 }
 
 I32 main(I32 argc, I8** argv) {
-  printf("GBoot 1.1\n");
+  // printf("GBoot 1.1\n");
   U16 BootSectorStart = 0x91EE;
   if (argc == 1) {
-    fprintf(stderr, "No files given\n");
+    fprintf(stderr, "gboot: \033[91mNo files given\033[0m\n");
     return status(false);
   }
   else if (argc == 2) {
-    fprintf(stderr, "No bootable GovnBin code given\n");
+    fprintf(stderr, "gboot: \033[91mNo bootable GovnBin code given\033[0m\n");
     return status(false);
   }
   FILE* drvfile = fopen(argv[1], "r+b");
   FILE* bsfile = fopen(argv[2], "rb");
   if (!drvfile) {
-    fprintf(stderr, "Drive %s not found\n", argv[1]);
+    fprintf(stderr, "gboot: \033[91mDrive %s not found\033[0m\n", argv[1]);
     return status(false);
   }
   if (!bsfile) {
-    fprintf(stderr, "Bootable binary %s not found\n", argv[2]);
+    fprintf(stderr, "gboot: \033[91mBootable binary %s not found\033[0m\n", argv[2]);
     return status(false);
   }
   fseek(drvfile, 0, SEEK_END);
@@ -58,7 +58,7 @@ I32 main(I32 argc, I8** argv) {
   fseek(bsfile, 0, SEEK_SET);
   fread(bsbuf, 1, bslen, bsfile);
 
-  printf("Writing to disk (%d bytes of disk storage, %d bytes of boot sector)\n", drvlen, bslen);
+  // printf("Writing to disk (%d bytes of disk storage, %d bytes of boot sector)\n", drvlen, bslen);
   memcpy(drvbuf+BootSectorStart, bsbuf, bslen);
   fseek(drvfile, 0, SEEK_SET);
   fwrite(drvbuf, 1, drvlen, drvfile);
