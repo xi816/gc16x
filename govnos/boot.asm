@@ -33,6 +33,21 @@ puts:
   inx %si
   jmp puts
 
+; dpputs - Output string from disk until NUL ($00) or predicate
+; Arguments:
+; B - predicate character
+; S - string address
+dpputs:
+  ldds
+  cmp %ax $00
+  re
+  cmp %ax %bx
+  re
+  push %ax
+  int $02
+  inx %si
+  jmp dpputs
+
 ; strtok - Progress the string pointer until character
 ; Arguments:
 ; S - string address
@@ -57,6 +72,26 @@ dstrtok:
   cmp %ax %bx
   jme .done
   inx %si
+  jmp dstrtok
+.error:
+  ldb $01
+  ret
+.done:
+  ldb $00
+  ret
+
+; dbstrtok - Progress back the string pointer{disk} until character
+; Arguments:
+; S - string address
+; B - end character
+; (also affects dynptr)
+dbstrtok:
+  ldds
+  cmp %ax $F7 ; End of the disk
+  jme .error
+  cmp %ax %bx
+  jme .done
+  dex %si
   jmp dstrtok
 .error:
   ldb $01
@@ -674,7 +709,6 @@ com_govnos:
 
 ; Commands
 com_govnosEXEC_dir:
-  call gfs_read_signature
   lds dir00_msg
   call puts
   ldb *drive_letter
@@ -682,12 +716,33 @@ com_govnosEXEC_dir:
   int $02
   lds dir01_msg
   call puts
+  lds $001F
+.dirloop:
+  ldb $F1
+  call dstrtok
+    cmp %bx $01
+    jme com_govnos.aftexec
+  ldb $F2
+  call dstrtok
+
+  ldg dir_tag
+  call dstrcmp
+    cmp %ax $00
+    jme .file_process
 
   lds dir_00msg
   call puts
-  ; lds kp_1_1msg
-  ; call fail
+  jmp .dirloop
   jmp com_govnos.aftexec ; Go to a new task after execution
+.file_process:
+  ldb $F1
+  call dbstrtok
+  add %si 2
+  ldb $F2
+  call dpputs
+  push $0A
+  int 2
+  jmp .dirloop
 
 com_govnosEXEC_cls:
   lds cls_seq
@@ -931,7 +986,7 @@ help_msg:      bytes "GovnOS Help manual page 1/1$"
                bytes "  retr      Restart the shell$^@"
 fre00_msg:     bytes " bytes free$^@"
 dir00_msg:     bytes "Drive ^@"
-dir01_msg:     bytes "$Contents of the drive:$  no shit make the driver first$^@"
+dir01_msg:     bytes "$Contents of the drive:$  ^@"
 color00_msg:   bytes "Enter the color number (0-7): ^@"
 fnf_msg:       bytes "Bad command or file name.$^@"
 ; GSFETCH
@@ -988,6 +1043,7 @@ locale_delim:      bytes ","
 ; GovnFS signatures
 com_file_sign: bytes $F2 "com/" $F2 $00
 com_file_full: reserve 96 bytes
+dir_tag:       bytes $F2 "com/" $F2 $00
 
 ; Control sequences
 bs_seq:        bytes "^H ^H^@"
