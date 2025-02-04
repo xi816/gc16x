@@ -5,6 +5,15 @@
 #define ROMSIZE 65536 // Maximum for a 16-bit cpu
 #define MEMSIZE 65536 // Maximum for a 16-bit cpu
 
+#ifdef TRAKTORIST_MM
+  #undef MEMSIZE
+  #define MEMSIZE 300000
+#endif
+
+// CPU info:
+// Speed: 1THz
+// State: Holy
+
 union gcreg {
   uint32_t dword;
   uint16_t word;

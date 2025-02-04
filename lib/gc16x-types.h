@@ -4,10 +4,9 @@
 */
 
 // GC16X types
-#define gcbyte unsigned char
-#define gcword unsigned short
+typedef unsigned char  gcbyte;
+typedef unsigned short gcword;
 
-// Non-GC16X types (over 16 bytes)
-#define nongcdword unsigned int
-#define nongcqword unsigned long long int
-
+// Non-GC16X types (over 16 bits)
+typedef unsigned int           nongcdword;
+typedef unsigned long long int nongcqword;

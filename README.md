@@ -11,8 +11,8 @@ For only compiling GC16X you can use the `./build` script. (`kasm` assembler wil
 Now you can start writing assembly code. For example, create a file called `test.asm`:
 ```asm
 main:
-  push $50
-  int 0
+  push $50 ; $ is hex
+  int 0 ; exit
 ```
 and compile it with `kasm`: `./kasm test.asm test.bin`.
 

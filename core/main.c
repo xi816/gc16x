@@ -63,6 +63,7 @@ U8 main(I32 argc, I8** argv) {
     // Disk signaures for GovnFS (without them, fs drivers would not work)
     gc.rom[0x00] = 0x60;
     gc.rom[0x11] = '#';
+    gc.rom[0x21] = 0xF7;
     gc.pin &= 0b01111111;
   }
   else { // Load a disk
