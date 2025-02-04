@@ -1241,4 +1241,3 @@ def main(argc: int, argv: list) -> int:
   return 0;
 
 sys.exit(main(len(sys.argv), sys.argv));
-

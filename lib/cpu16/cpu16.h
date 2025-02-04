@@ -1118,7 +1118,7 @@ U8 CMPpi(GC* gc) {
 // 88 - Exchange two registers
 U8 XCHG4(GC* gc) {
   gcrc_t rc = ReadRegClust(gc->mem[gc->PC+1]);
-  U16 temp = rc.x;
+  U16 temp = *ReadReg(gc, rc.x);
   *ReadReg(gc, rc.x) = rc.y;
   *ReadReg(gc, rc.y) = temp;
   gc->PC += 2;
