@@ -1119,7 +1119,7 @@ U8 CMPpi(GC* gc) {
 U8 XCHG4(GC* gc) {
   gcrc_t rc = ReadRegClust(gc->mem[gc->PC+1]);
   U16 temp = *ReadReg(gc, rc.x);
-  *ReadReg(gc, rc.x) = rc.y;
+  *ReadReg(gc, rc.x) = *ReadReg(gc, rc.y);
   *ReadReg(gc, rc.y) = temp;
   gc->PC += 2;
   return 0;
