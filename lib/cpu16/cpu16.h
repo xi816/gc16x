@@ -26,8 +26,15 @@ struct gcrc {
   gcbyte x;
   gcbyte y;
 };
-typedef struct gcregs gcregs_t;
 typedef struct gcrc gcrc_t;
+
+// SIB byte
+struct gcsib {
+  gcbyte scale;
+  gcbyte index;
+  gcbyte base;
+};
+typedef struct gcrc SIBs;
 
 struct GC16X {
   // Registers
@@ -61,6 +68,8 @@ struct GC16X {
   // disp_prefix - 0x90 | si -> bit 3 (least significant)
   gcbyte disp_prefix; // Displacement prefix: define registers added to the address used in the instruction.
                       // Can be: $91,$92,$93,$94,$95,$96,$97,$98,$99,$9A,$9B,$9C,$9D,$9E,$9F
+  gcbyte sib_prefix;  // Scale-Index-Base prefix: define SIB added to the immediate used in the instruction.
+                      // Opcode: $24
 
   // GPU
   gc_gg16 gg;
@@ -1147,11 +1156,23 @@ U8 DEXM(GC* gc) {   // 90
 }
 
 U8 _PREF(GC* gc) {
-  if (!gc->disp_prefix) gc->disp_prefix = gc->mem[gc->PC++] - 0x90;
-  else {
-    fatal("Two prefixes of the same type: disp_prefix\n");
-    old_st_legacy;
-    exit(1);
+  switch (gc->mem[gc->PC]) {
+    case 0x24:
+      puts("SIB prefix yayyy");
+      gc->sib_prefix = 0x24;
+      break;
+    case 0x91 ... 0x9F:
+      if (!gc->disp_prefix) {
+        gc->disp_prefix = gc->mem[gc->PC++] - 0x90;
+      }
+      else {
+        fatal("gc16x: \033[91merror:\033[0m Two prefixes of the same type: disp_prefix\n");
+        old_st_legacy;
+        exit(1);
+      }
+      break;
+    default:
+      printf("gc16x: \033[91merror:\033[0m Unhandled prefix %02X\n", gc->mem[gc->PC]);
   }
   return 0;
 }
@@ -1251,7 +1272,7 @@ U8 PG66(GC*); // Page 66 - Load/Store operations
 U8 (*INSTS[256])() = {
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &PG0F ,
   &PG10 , &LDRp , &LDRp , &LDRp , &LDRp , &LDRp , &LDRp , &LDRp , &LDRp , &LDRp , &LDRp , &LDRp , &LDRp , &LDRp , &LDRp , &LDRp ,
-  &LDRp , &UNK  , &UNK  , &RC   , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &RE   , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &LDRp , &UNK  , &UNK  , &RC   , &_PREF, &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &RE   , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &RET  , &STI  , &UNK  , &CLC  , &UNK  , &UNK  , &UNK  , &UNK  , &RNE  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &LDA0 , &LDB0 , &LDC0 , &LDD0 , &LDS0 , &LDG0 , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &HLT  , &CLI  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
