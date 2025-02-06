@@ -142,6 +142,7 @@ U8 UNK(GC* gc) {    // Unknown instruction
     fprintf(stderr, "From page $10\n");
   }
   else if (gc->mem[gc->PC-1] == 0x66) {
+    fprintf(stderr, "This page shouln't exist\n");
     fprintf(stderr, "From the shitty page\n");
   }
   fprintf(stderr, "\033[31mIllegal\033[0m instruction \033[33m%02X\033[0m\nAt position %04X\n", gc->mem[gc->PC], gc->PC);
@@ -1275,7 +1276,7 @@ U8 (*INSTS[256])() = {
   &LDRp , &UNK  , &UNK  , &RC   , &_PREF, &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &RE   , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &RET  , &STI  , &UNK  , &CLC  , &UNK  , &UNK  , &UNK  , &UNK  , &RNE  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &LDA0 , &LDB0 , &LDC0 , &LDD0 , &LDS0 , &LDG0 , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
-  &UNK  , &HLT  , &CLI  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &UNK  , &HLT  , &CLI  , &LDAA , &LDBA , &LDCA , &LDDA , &LDSA , &LDGA , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &PG66 , &UNK  , &UNK  , &CMPpi, &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &LDA1 , &LDB1 , &LDC1 , &LDD1 , &LDS1 , &LDG1 , &LDSP1, &LDBP1, &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &XCHG4, &UNK  , &LODSW, &STOSW, &UNK  , &UNK  , &UNK  , &UNK  ,
@@ -1332,7 +1333,7 @@ U8 (*INSTS_PG66[256])() = {
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &LDAZS, &LDBZS, &LDCZS, &LDDZS, &LDSZS, &LDGZS, &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &LDAZG, &LDBZG, &LDCZG, &LDDZG, &LDSZG, &LDGZG, &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
-  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &LDAA , &LDBA , &LDCA , &LDDA , &LDSA , &LDGA , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &LDAAS, &LDBAS, &LDCAS, &LDDAS, &LDSAS, &LDGAS, &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &LDAAG, &LDBAG, &LDCAG, &LDDAG, &LDSAG, &LDGAG, &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &LDA0S, &LDB0S, &LDC0S, &LDD0S, &LDS0S, &LDG0S, &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,

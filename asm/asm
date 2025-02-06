@@ -57,6 +57,19 @@ def PrintLabs(labs: dict):
   for i in labs:
     print(f"{i+':': <30}${hex(labs[i])[2:].upper():0>4}");
 
+def ExportLabs(filename: str, labs: dict, output_file: str):
+  with open(output_file, "w") as fl:
+    for i in labs:
+      fl.write(f"{i}	{hex(labs[i])[2:].upper():0>4}\n");
+
+def ImportLabs(filename: str, labs: dict, import_file: str):
+  with open(import_file, "r") as fl:
+    for line in fl.read().split("\n"):
+      if (line):
+        symbol,val = line.split(chr(9));
+        labs[symbol] = int(val, base=16);
+  return labs;
+
 def OffsetLabs(labs: dict, offset: int):
   for i in labs:
     labs[i] += offset;
@@ -223,6 +236,8 @@ def Lex(prog: str, filename: str):
           toks.append((T_BYTE, 0));
         elif (buf == "reserve"):
           toks.append((T_MCR, "reserve"));
+        elif (buf == "extern"):
+          toks.append((T_MCR, "extern"));
         else:
           toks.append((T_0ID, buf));
       buf = "";
@@ -245,7 +260,7 @@ def RemEmpty(prog: str):
   return "\n".join([i for i in prog.split("\n") if i]);
 
 # Parser:
-def Parse(toks: list, filename: str) -> list:
+def Parse(toks: list, filename: str, expm: int) -> list:
   labels: dict = {};
   ast:    list = [];
   pos:    int  = 0;
@@ -315,7 +330,7 @@ def Parse(toks: list, filename: str) -> list:
           pos += 2;
         elif (toks[pos+1][0] == T_IDD): # LDA DRF ADDR16(LABEL)
           ast.append([ASTINS, "lda:b", toks[pos+1][1], pc]);
-          pc += 4;
+          pc += 3;
           pos += 2;
         elif (toks[pos+1][0] == T_DREG): # LDA *reg16 ADDR16(LABEL)
           ast.append([ASTINS, "lda:R", toks[pos+1][1], pc]);
@@ -339,7 +354,7 @@ def Parse(toks: list, filename: str) -> list:
           pos += 2;
         elif (toks[pos+1][0] == T_IDD): # LDB DRF ADDR16(LABEL)
           ast.append([ASTINS, "ldb:b", toks[pos+1][1], pc]);
-          pc += 4;
+          pc += 3;
           pos += 2;
         elif (toks[pos+1][0] == T_DREG): # LDB *reg16 ADDR16(LABEL)
           ast.append([ASTINS, "ldb:R", toks[pos+1][1], pc]);
@@ -363,7 +378,7 @@ def Parse(toks: list, filename: str) -> list:
           pos += 2;
         elif (toks[pos+1][0] == T_IDD): # LDC DRF ADDR16(LABEL)
           ast.append([ASTINS, "ldc:b", toks[pos+1][1], pc]);
-          pc += 4;
+          pc += 3;
           pos += 2;
         elif (toks[pos+1][0] == T_DREG): # LDC *reg16 ADDR16(LABEL)
           ast.append([ASTINS, "ldc:R", toks[pos+1][1], pc]);
@@ -387,7 +402,7 @@ def Parse(toks: list, filename: str) -> list:
           pos += 2;
         elif (toks[pos+1][0] == T_IDD): # LDD DRF ADDR16(LABEL)
           ast.append([ASTINS, "ldd:b", toks[pos+1][1], pc]);
-          pc += 4;
+          pc += 3;
           pos += 2;
         elif (toks[pos+1][0] == T_DREG): # LDD *reg16 ADDR16(LABEL)
           ast.append([ASTINS, "ldd:R", toks[pos+1][1], pc]);
@@ -411,7 +426,7 @@ def Parse(toks: list, filename: str) -> list:
           pos += 2;
         elif (toks[pos+1][0] == T_IDD): # LDS DRF ADDR16(LABEL)
           ast.append([ASTINS, "lds:b", toks[pos+1][1], pc]);
-          pc += 4;
+          pc += 3;
           pos += 2;
         elif (toks[pos+1][0] == T_DREG): # LDS *reg16 ADDR16(LABEL)
           ast.append([ASTINS, "lds:R", toks[pos+1][1], pc]);
@@ -435,7 +450,7 @@ def Parse(toks: list, filename: str) -> list:
           pos += 2;
         elif (toks[pos+1][0] == T_IDD): # LDG DRF ADDR16(LABEL)
           ast.append([ASTINS, "ldg:b", toks[pos+1][1], pc]);
-          pc += 4;
+          pc += 3;
           pos += 2;
         elif (toks[pos+1][0] == T_DREG): # LDG *reg16 ADDR16(LABEL)
           ast.append([ASTINS, "ldg:R", toks[pos+1][1], pc]);
@@ -737,24 +752,37 @@ def Parse(toks: list, filename: str) -> list:
       if (toks[pos][1] == "reserve"):
         if (toks[pos+1][0] != T_INT):
           print(f"\033[31mError\033[0m: expected number after reserve.");
-          print(f"\033[96mHint\033[0m: syntax for `reserve` is: reserve #10 bytes");
+          print(f"\033[96mHint\033[0m: syntax for `reserve` is: reserve 10 bytes");
           exit(1);
         if (toks[pos+2][0] == T_BYTE):
           restype = 1; # bytes
         else:
           print(f"\033[31mError\033[0m: expected bytes after reserve #n.");
-          print(f"\033[96mHint\033[0m: syntax for `reserve` is: reserve #10 bytes");
+          print(f"\033[96mHint\033[0m: syntax for `reserve` is: reserve 10 bytes");
           exit(1);
         ast.append([ASTRES, "__B_reserve", toks[pos+1][1]*restype, pc]);
         pc += toks[pos+1][1]*restype;
         pos += 3;
+      elif (toks[pos][1] == "extern"):
+        if (toks[pos+1][0] != T_STR):
+          print(f"\033[31mError\033[0m: expected filename after extern.");
+          print(f"\033[96mHint\033[0m: syntax for `extern` is: extern \"filename\"");
+          exit(1);
+        with open(toks[pos+1][1], "rb") as extern_file:
+          extern_source = extern_file.read()
+        ast.append([ASTRES, "__B_extern", extern_source, pc]);
+        pc += len(extern_source);
+        pos += 2;
     elif (toks[pos][0] == T_EOL): # Parse EOL
       pos += 1;
     else:
       print(f"Wtf is token {toks[pos][0]} at {pos}");
       exit(1);
   ast.append([ASTEOF, 0, 0, pc]);
-  print(f"{filename}: program size: {pc} bytes");
+  if (expm):
+    print(f"\033[92m{filename}: exporting {pc} bytes\033[0m");
+  else:
+    print(f"{filename}: program size: {pc} bytes");
   return ast, labels;
 
 # Compiler:
@@ -815,8 +843,7 @@ def CompileGC16X(prog: list, labs: dict):
         code.append(val >> 8);
         pos += 1;
       elif (prog[pos][1] == "lda:b"): # LDA absolute
-        code.append(0x66);
-        code.append(0x55);
+        code.append(0x53);
         val = labs[prog[pos][2]];
         code.append(val % 256);
         code.append(val >> 8);
@@ -841,8 +868,7 @@ def CompileGC16X(prog: list, labs: dict):
         code.append(val >> 8);
         pos += 1;
       elif (prog[pos][1] == "ldb:b"): # LDB absolute
-        code.append(0x66);
-        code.append(0x56);
+        code.append(0x54);
         val = labs[prog[pos][2]];
         code.append(val % 256);
         code.append(val >> 8);
@@ -867,8 +893,7 @@ def CompileGC16X(prog: list, labs: dict):
         code.append(prog[pos][2]);
         pos += 1;
       elif (prog[pos][1] == "ldc:b"): # LDC absolute
-        code.append(0x66);
-        code.append(0x57);
+        code.append(0x55);
         val = labs[prog[pos][2]];
         code.append(val % 256);
         code.append(val >> 8);
@@ -893,8 +918,7 @@ def CompileGC16X(prog: list, labs: dict):
         code.append(prog[pos][2]);
         pos += 1;
       elif (prog[pos][1] == "ldd:b"): # LDD absolute
-        code.append(0x66);
-        code.append(0x58);
+        code.append(0x56);
         val = labs[prog[pos][2]];
         code.append(val % 256);
         code.append(val >> 8);
@@ -919,8 +943,7 @@ def CompileGC16X(prog: list, labs: dict):
         code.append(prog[pos][2]);
         pos += 1;
       elif (prog[pos][1] == "lds:b"): # LDS absolute
-        code.append(0x66);
-        code.append(0x59);
+        code.append(0x57);
         val = labs[prog[pos][2]];
         code.append(val % 256);
         code.append(val >> 8);
@@ -945,8 +968,7 @@ def CompileGC16X(prog: list, labs: dict):
         code.append(val >> 8);
         pos += 1;
       elif (prog[pos][1] == "ldg:b"): # LDG absolute
-        code.append(0x66);
-        code.append(0x5A);
+        code.append(0x58);
         val = labs[prog[pos][2]];
         code.append(val % 256);
         code.append(val >> 8);
@@ -1205,23 +1227,39 @@ def CompileGC16X(prog: list, labs: dict):
 
 def main(argc: int, argv: list) -> int:
   diskmode = False;
+  exportmode = False;
   if (argc == 1):
     print("No arguments given");
     return 1;
   elif (argc == 2):
     print("No binary filename given");
     return 1;
+  argp: int = 1;
+  imp_files = [];
+  while (argp < argc):
+    match (argv[argp]):
+      case "-export":
+        exportmode = 1;
+        argp += 1;
+      case "-import":
+        imp_files.append(argv[argp+1]);
+        argp += 2;
+      case "-d":
+        diskmode = True;
+        argp += 1;
+      case _:
+        progname = argv[argp];
+        outname = argv[argp+1];
+        break;
+
   if (argc == 3):
     progname = argv[1];
     outname = argv[2];
-  elif (argc == 4):
-    if (argv[1] == "-d"):
-      diskmode = True;
-    else:
-      print(f"\033[31mUnknown\033[0m argument `{argv[1]}`");
-      return 1;
-    progname = argv[2];
-    outname = argv[3];
+  # elif (argc == 4):
+  #   print(f"\033[31mUnknown\033[0m argument `{argv[1]}`");
+  #   return 1;
+  #   progname = argv[2];
+  #   outname = argv[3];
 
   with open(progname, "r") as fl:
     src = fl.read();
@@ -1230,10 +1268,14 @@ def main(argc: int, argv: list) -> int:
   if (type(tokens[1]) is int):
     print("Fatal error. Can't compile");
     exit(tokens);
-  ast, labs = Parse(tokens, progname);
+  ast, labs = Parse(tokens, progname, exportmode);
   if (diskmode):
     labs = OffsetLabs(labs, 0x3000);
-  # PrintLabs(labs);
+  if (exportmode):
+    ExportLabs(progname, labs, outname);
+    exit(1);
+  for imp_file in imp_files:
+    labs = ImportLabs(progname, labs, imp_file);
   c, exitcode = CompileGC16X(ast, labs);
   with open(outname, "wb") as fl:
     fl.write(c);

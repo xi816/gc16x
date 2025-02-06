@@ -21,9 +21,11 @@ govnos-load() {
 
 # Compile GovnOS
 compile-govnos() {
+  ./kasm -export govnos/boot.asm govnos/exports/boot
+
   ./kasm govnos/boot.asm govnos/boot.bin
   ./kasm -d govnos/kernel.asm govnos/kernel.bin
-  ./kasm -d govnos/info.asm govnos/info.bin
+  ./kasm -d -import govnos/exports/boot govnos/info.asm govnos/info.bin
 }
 
 # Start
