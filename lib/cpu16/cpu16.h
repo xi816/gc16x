@@ -14,6 +14,21 @@
 // Speed: 1THz
 // State: Holy
 
+#define IF(ps) (ps & 0b01000000)
+#define ZF(ps) (ps & 0b00000100)
+#define NF(ps) (ps & 0b00000010)
+#define CF(ps) (ps & 0b00000001)
+
+#define SET_IF(ps) (ps |= 0b01000000)
+#define SET_ZF(ps) (ps |= 0b00000100)
+#define SET_NF(ps) (ps |= 0b00000010)
+#define SET_CF(ps) (ps |= 0b00000001)
+
+#define RESET_IF(ps) (ps &= 0b10111111)
+#define RESET_ZF(ps) (ps &= 0b11111011)
+#define RESET_NF(ps) (ps &= 0b11111101)
+#define RESET_CF(ps) (ps &= 0b11111110)
+
 union gcreg {
   uint32_t dword;
   uint16_t word;
@@ -153,28 +168,28 @@ U8 UNK(GC* gc) {    // Unknown instruction
 
 // 0F 29 -- Jump if zero flag set to imm16 address
 U8 JME0(GC* gc) {
-  if (gc->PS & 0b00000100) { gc->PC = ReadWord(gc, gc->PC+1); gc->PS &= 0b11111011; }
+  if (ZF(gc->PS)) { gc->PC = ReadWord(gc, gc->PC+1); RESET_ZF(gc->PS); }
   else { gc->PC += 3; }
   return 0;
 }
 
 // 0F 2A -- Jump set to imm16 address if zero flag not
 U8 JMNE0(GC* gc) {
-  if (!((gc->PS & 0b00000100) >> 2)) { gc->PC = ReadWord(gc, gc->PC+1); gc->PS &= 0b11111011; }
+  if (!ZF(gc->PS)) { gc->PC = ReadWord(gc, gc->PC+1); }
   else { gc->PC += 3; }
   return 0;
 }
 
 // 0F BB -- Jump to imm16 address if negative flag set
 U8 JL0(GC* gc) {
-  if (!(gc->PS & 0b00000010)) { gc->PC = ReadWord(gc, gc->PC+1); gc->PS &= 0b11111101; }
+  if (NF(gc->PS)) { gc->PC = ReadWord(gc, gc->PC+1); gc->PS &= 0b11111101; }
   else { gc->PC += 3; }
   return 0;
 }
 
 // 0F CB -- Jump to imm16 address if negative flag set
 U8 JG0(GC* gc) {
-  if (gc->PS & 0b00000010) { gc->PC = ReadWord(gc, gc->PC+1); gc->PS &= 0b11111101; }
+  if (!NF(gc->PS)) { gc->PC = ReadWord(gc, gc->PC+1); RESET_NF(gc->PS); }
   else { gc->PC += 3; }
   return 0;
 }
@@ -227,7 +242,7 @@ U8 PUSHp(GC* gc) {
 
 // Interrupt calls
 U8 INT(GC* gc, bool ri) {
-  if (!((gc->PS & 0b01000000) >> 6)) {
+  if (!IF(gc->PS & 0b01000000)) {
     gc->PC += 2;
     return 0;
   }
@@ -665,19 +680,19 @@ U8 OR11(GC* gc) {  // 10 D9
 
 U8 CMP11(GC* gc) {  // 10 F6
   gcrc_t rc = ReadRegClust(gc->mem[gc->PC+1]);
-  if (*ReadReg(gc, rc.x) == *ReadReg(gc, rc.y)) gc->PS |= 0b00000100;
-  else gc->PS &= 0b11111011;
-  if ((I16)(*ReadReg(gc, rc.x) - *ReadReg(gc, rc.y)) < 0) gc->PS |= 0b00000010;
-  else gc->PS &= 0b11111101;
+  if (*ReadReg(gc, rc.x) == *ReadReg(gc, rc.y)) SET_ZF(gc->PS);
+  else RESET_ZF(gc->PS);
+  if (((I16)*ReadReg(gc, rc.x) - *ReadReg(gc, rc.y)) < 0) SET_NF(gc->PS);
+  else RESET_NF(gc->PS);
   gc->PC += 2; // Set equal flag if two register values
   return 0;      // are equal
 }
 
 U8 CMP10(GC* gc) {  // 10 EE
-  if ((*ReadReg(gc, gc->mem[gc->PC+1]) == ReadWord(gc, gc->PC+2))) gc->PS |= 0b00000100;
-  else gc->PS &= 0b11111011;
-  if (((I16)(*ReadReg(gc, gc->mem[gc->PC+1]) - ReadWord(gc, gc->PC+2)) < 0)) gc->PS |= 0b00000010;
-  else gc->PS &= 0b11111101;
+  if ((*ReadReg(gc, gc->mem[gc->PC+1]) == ReadWord(gc, gc->PC+2))) SET_ZF(gc->PS);
+  else RESET_ZF(gc->PS);
+  if (((I16)(*ReadReg(gc, gc->mem[gc->PC+1]) - ReadWord(gc, gc->PC+2)) < 0)) SET_NF(gc->PS);
+  else RESET_NF(gc->PS);
   gc->PC += 4; // Set equal flag if a register and
   return 0;      // immediate are equal
 }
@@ -690,37 +705,36 @@ U8 LDRp(GC* gc) {
 }
 
 U8 RC(GC* gc) {   // 23 - Return if carry set
-  if (gc->PS & 0b00000001) gc->PC = StackPop(gc);
+  if (CF(gc->PS)) gc->PC = StackPop(gc);
   else gc->PC++;
   return 0;
 }
 
 U8 RE(GC* gc) {   // 2B - Return if equal
-  if (gc->PS & 0b00000100) gc->PC = StackPop(gc);
+  if (ZF(gc->PS)) gc->PC = StackPop(gc);
   else gc->PC++;
   return 0;
 }
 
 U8 RET(GC* gc) {   // 33
   gc->PC = StackPop(gc);
-  gc->PS &= 0b11111011;
   return 0;
 }
 
 U8 RNE(GC* gc) {   // 2B - Return if not equal
-  if (!((gc->PS & 0b00000100) >> 2)) gc->PC = StackPop(gc);
+  if (!ZF(gc->PS & 0b00000100)) gc->PC = StackPop(gc);
   else gc->PC++;
   return 0;
 }
 
 U8 STI(GC* gc) {   // 34
-  gc->PS |= 0b01000000;
+  SET_IF(gc->PS);
   gc->PC++;
   return 0;
 }
 
 U8 CLC(GC* gc) {   // 36
-  gc->PS &= 0b11111110;
+  RESET_CF(gc->PS);
   gc->PC++;
   return 0;
 }
@@ -732,7 +746,7 @@ U8 HLT(GC* gc) {   // 51
 }
 
 U8 CLI(GC* gc) {   // 52
-  gc->PS &= 0b10111111;
+  RESET_IF(gc->PS);
   gc->PC++;
   return 0;
 }
@@ -1088,10 +1102,10 @@ U8 LDBP1(GC* gc) {   // 66 AC
 
 // 69 -- Compare *reg16 and imm16
 U8 CMPpi(GC* gc) {
-  if (gc->mem[*ReadReg(gc, gc->mem[gc->PC+1])] == ReadWord(gc, gc->PC+2)) gc->PS |= 0b00000100;
-  else gc->PS &= 0b11111011;
-  if (((I16)(gc->mem[*ReadReg(gc, gc->mem[gc->PC+1])] - ReadWord(gc, gc->PC+2)) < 0)) gc->PS |= 0b00000010;
-  else gc->PS &= 0b11111101;
+  if (gc->mem[*ReadReg(gc, gc->mem[gc->PC+1])] == ReadWord(gc, gc->PC+2)) SET_ZF(gc->PS);
+  else RESET_ZF(gc->PS);
+  if (((I16)(gc->mem[*ReadReg(gc, gc->mem[gc->PC+1])] - ReadWord(gc, gc->PC+2)) < 0)) SET_NF(gc->PS);
+  else RESET_NF(gc->PS);
   gc->PC += 4;
   return 0;
 }
