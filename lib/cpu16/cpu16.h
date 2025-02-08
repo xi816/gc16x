@@ -737,38 +737,9 @@ U8 CLI(GC* gc) {   // 52
   return 0;
 }
 
-U8 LDA0(GC* gc) {   // 40 -- LDA imm16
-  gc->AX.word = ReadWord(gc, gc->PC+1);
-  gc->PC += 3;
-  return 0;
-}
-
-U8 LDB0(GC* gc) {   // 41 -- LDB imm16
-  gc->BX.word = ReadWord(gc, gc->PC+1);
-  gc->PC += 3;
-  return 0;
-}
-
-U8 LDC0(GC* gc) {   // 42 -- LDC imm16
-  gc->CX.word = ReadWord(gc, gc->PC+1);
-  gc->PC += 3;
-  return 0;
-}
-
-U8 LDD0(GC* gc) {   // 43 -- LDD imm16
-  gc->DX.word = ReadWord(gc, gc->PC+1);
-  gc->PC += 3;
-  return 0;
-}
-
-U8 LDS0(GC* gc) {   // 44 -- LDS imm16
-  gc->SI.word = ReadWord(gc, gc->PC+1);
-  gc->PC += 3;
-  return 0;
-}
-
-U8 LDG0(GC* gc) {   // 45 -- LDG imm16
-  gc->GI.word = ReadWord(gc, gc->PC+1);
+// 40-4F -- Load imm16 to reg16
+U8 LDr0(GC* gc) {
+  *ReadReg(gc, gc->mem[gc->PC]-0x40) = ReadWord(gc, gc->PC+1);
   gc->PC += 3;
   return 0;
 }
@@ -1185,6 +1156,13 @@ U8 ASL(GC* gc) {    // A0-A7
   return 0;
 }
 
+// D8-E7 -- Store *m8 to reg16
+U8 STr0(GC* gc) {
+  gc->mem[ReadWord(gc, gc->PC+1)] = *ReadReg(gc, gc->mem[gc->PC]-0xD8);
+  gc->PC += 3;
+  return 0;
+}
+
 // B0 - Increment *m16
 U8 INXM(GC* gc) {
   gc->mem[ReadWord(gc, gc->PC+1)]++;
@@ -1247,7 +1225,7 @@ U8 ASR(GC* gc) {
   return 0;
 }
 
-// EA - Do nothin
+// EA - Do nothing
 U8 NOP(GC* gc) {
   return 0;
 }
@@ -1275,7 +1253,7 @@ U8 (*INSTS[256])() = {
   &PG10 , &LDRp , &LDRp , &LDRp , &LDRp , &LDRp , &LDRp , &LDRp , &LDRp , &LDRp , &LDRp , &LDRp , &LDRp , &LDRp , &LDRp , &LDRp ,
   &LDRp , &UNK  , &UNK  , &RC   , &_PREF, &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &RE   , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &RET  , &STI  , &UNK  , &CLC  , &UNK  , &UNK  , &UNK  , &UNK  , &RNE  , &UNK  , &UNK  , &UNK  , &UNK  ,
-  &LDA0 , &LDB0 , &LDC0 , &LDD0 , &LDS0 , &LDG0 , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &LDr0 , &LDr0 , &LDr0 , &LDr0 , &LDr0 , &LDr0 , &LDr0 , &LDr0 , &LDr0 , &LDr0 , &LDr0 , &LDr0 , &LDr0 , &LDr0 , &LDr0 , &LDr0 ,
   &UNK  , &HLT  , &CLI  , &LDAA , &LDBA , &LDCA , &LDDA , &LDSA , &LDGA , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &PG66 , &UNK  , &UNK  , &CMPpi, &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &LDA1 , &LDB1 , &LDC1 , &LDD1 , &LDS1 , &LDG1 , &LDSP1, &LDBP1, &UNK  ,
@@ -1284,8 +1262,8 @@ U8 (*INSTS[256])() = {
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &INXM , &STRb , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &LOOP , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &MV26 , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &CALL , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
-  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &COP1 , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
-  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &NOP  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &COP1 , &STr0 , &STr0 , &STr0 , &STr0 , &STr0 , &STr0 , &STr0 , &STr0 ,
+  &STr0 , &STr0 , &STr0 , &STr0 , &STr0 , &STr0 , &STr0 , &STr0 , &UNK  , &UNK  , &NOP  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &LFA  , &LAF  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK
 };
 
