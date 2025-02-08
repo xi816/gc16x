@@ -32,7 +32,7 @@
 union gcreg {
   uint32_t dword;
   uint16_t word;
-  uint8_t  hl;
+  uint8_t hl;
 };
 typedef union gcreg gcreg;
 
@@ -592,74 +592,16 @@ U8 STDG(GC* gc) {  // 10 BB
   return 0;
 }
 
-U8 INXA(GC* gc) {   // 10 C0
-  gc->AX.word++;
+// 10C0-10CF -- Increment reg16
+U8 INXr(GC* gc) {
+  (*ReadReg(gc, gc->mem[gc->PC]-0xC0))++;
   gc->PC++;
   return 0;
 }
 
-U8 INXB(GC* gc) {   // 10 C1
-  gc->BX.word++;
-  gc->PC++;
-  return 0;
-}
-
-U8 INXC(GC* gc) {   // 10 C2
-  gc->CX.word++;
-  gc->PC++;
-  return 0;
-}
-
-U8 INXD(GC* gc) {   // 10 C3
-  gc->DX.word++;
-  gc->PC++;
-  return 0;
-}
-
-U8 INXS(GC* gc) {   // 10 C4
-  gc->SI.word++;
-  gc->PC++;
-  return 0;
-}
-
-U8 INXG(GC* gc) {   // 10 C5
-  gc->GI.word++;
-  gc->PC++;
-  return 0;
-}
-
-U8 DEXA(GC* gc) {   // 10 D0
-  gc->AX.word--;
-  gc->PC++;
-  return 0;
-}
-
-U8 DEXB(GC* gc) {   // 10 D1
-  gc->BX.word--;
-  gc->PC++;
-  return 0;
-}
-
-U8 DEXC(GC* gc) {   // 10 D2
-  gc->CX.word--;
-  gc->PC++;
-  return 0;
-}
-
-U8 DEXD(GC* gc) {   // 10 D3
-  gc->DX.word--;
-  gc->PC++;
-  return 0;
-}
-
-U8 DEXS(GC* gc) {   // 10 D4
-  gc->SI.word--;
-  gc->PC++;
-  return 0;
-}
-
-U8 DEXG(GC* gc) {   // 10 D5
-  gc->GI.word--;
+// 10D0-10DF -- Decrement reg16
+U8 DEXr(GC* gc) {
+  (*ReadReg(gc, gc->mem[gc->PC]-0xD0))--;
   gc->PC++;
   return 0;
 }
@@ -1313,8 +1255,8 @@ U8 (*INSTS_PG10[256])() = {
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &LDDG , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &STDS , &UNK  , &UNK  , &UNK  , &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &STDG , &UNK  , &UNK  , &UNK  , &UNK  ,
-  &INXA , &INXB , &INXC , &INXD , &INXS , &INXG , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
-  &DEXA , &DEXB , &DEXC , &DEXD , &DEXS , &DEXG , &UNK  , &UNK  , &AND11, &OR11 , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &INXr , &INXr , &INXr , &INXr , &INXr , &INXr , &INXr , &INXr , &INXr , &INXr , &INXr , &INXr , &INXr , &INXr , &INXr , &INXr ,
+  &DEXr , &DEXr , &DEXr , &DEXr , &DEXr , &DEXr , &DEXr , &DEXr , &DEXr , &DEXr , &DEXr , &DEXr , &DEXr , &DEXr , &DEXr , &DEXr ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &CMP10, &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &CMP11, &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK
 };

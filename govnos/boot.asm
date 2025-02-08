@@ -359,17 +359,17 @@ scani:
   int $01
   pop %bx
 
-  cmp %bx '0' ; Check if less than '0'
-  jl .loop
-  cmp %bx '9' ; Check if greater than '9'
-  jg .loop
-
   cmp %bx $0A ; Check for Enter
   re
   cmp %bx $20 ; Check for space
   re
   cmp %bx $00 ; Check for NUL ($00)
   re
+  cmp %bx $30 ; Check if less than '0'
+  jl .loop
+  cmp %bx $3A ; Check if greater than '9'+1
+  jg .loop
+
   mul %ax 10
   push %bx
   int $02
@@ -1006,9 +1006,9 @@ gsfc_backM:    bytes "^[[7A^[[33m  .     . .$"
                bytes            " (========)^[[0m$$^@"
 
 ; Kernel panic
-; 0    Processor error
-; 1    Disk/Filesystem error
-; 41   Unknown error
+; 0        Processor error
+; 1        Disk/Filesystem error
+; 41       Unknown error
 kp_0_0msg:     bytes "Kernel panic: Unable to find processor type(0,0)$^@"
 kp_1_0msg:     bytes "Kernel panic: Unknown filesystem(1,0)$^@"
 kp_1_1msg:     bytes "Kernel panic: Could not read disk(1,1)$^@"
