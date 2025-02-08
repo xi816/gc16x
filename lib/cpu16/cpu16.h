@@ -1257,7 +1257,7 @@ U8 (*INSTS_PG10[256])() = {
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &STDG , &UNK  , &UNK  , &UNK  , &UNK  ,
   &INXr , &INXr , &INXr , &INXr , &INXr , &INXr , &INXr , &INXr , &INXr , &INXr , &INXr , &INXr , &INXr , &INXr , &INXr , &INXr ,
   &DEXr , &DEXr , &DEXr , &DEXr , &DEXr , &DEXr , &DEXr , &DEXr , &DEXr , &DEXr , &DEXr , &DEXr , &DEXr , &DEXr , &DEXr , &DEXr ,
-  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &CMP10, &UNK  ,
+  &ADD11, &OR11 , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &CMP10, &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &CMP11, &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK
 };
 
