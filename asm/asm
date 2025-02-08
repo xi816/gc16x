@@ -274,7 +274,7 @@ def Parse(toks: list, filename: str, expm: int) -> list:
           pos += 3;
         elif (toks[pos+2][0] == T_REG): # MOV reg16 reg16
           ast.append([ASTINS, "mov:r", (toks[pos+1][1], toks[pos+2][1]), pc]);
-          pc += 2; # 66 A5 00
+          pc += 2; # 66 A5 00 (NO)
           pos += 3;
         elif (toks[pos+2][0] == T_0ID): # MOV m16(label)
           ast.append([ASTINS, "mov:l", (toks[pos+1][1], toks[pos+2][1]), pc]);
@@ -282,7 +282,7 @@ def Parse(toks: list, filename: str, expm: int) -> list:
           pos += 3;
         elif (toks[pos+2][0] == T_IDD): # MOV *m16(label)
           ast.append([ASTINS, "mov:b", (toks[pos+1][1], toks[pos+2][1]), pc]);
-          pc += 4;
+          pc += 3;
           pos += 3;
         elif (toks[pos+2][0] == T_DREG): # MOV *reg16 m16(label)
           ast.append([ASTINS, "mov:R", (toks[pos+1][1], toks[pos+2][1]), pc]);
@@ -811,8 +811,7 @@ def CompileGC16X(prog: list, labs: dict):
         code.append(val >> 8);
         pos += 1;
       elif (prog[pos][1] == "mov:b"): # MOV reg16 *m16
-        code.append(0x66);
-        code.append(0x55+prog[pos][2][0]);
+        code.append(0x53+prog[pos][2][0]);
         val = labs[prog[pos][2][1]];
         code.append(val % 256);
         code.append(val >> 8);
