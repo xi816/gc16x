@@ -14,9 +14,11 @@ format-disk() {
 # Load GovnOS into a bootable sector
 govnos-load() {
   printf "Loading GovnOS into %s...\n" $1
-  ./gboot $1 govnos/boot.bin
-  ./gload $1 govnos/kernel.bin "kernel.bin"
-  ./gload $1 govnos/info.bin "info"
+  ./gboot $1 govnos/boot.bin # Bootloader to $91EE
+  ./gload $1 govnos/kernel.bin "kernel.bin" # Kernel
+  ./gload $1 govnos/info.bin "info" # Info file
+  # Utilities
+  ./gload $1 govnos/scrclr.bin "scrclr"
 }
 
 # Compile GovnOS
@@ -26,6 +28,7 @@ compile-govnos() {
   ./kasm govnos/boot.asm govnos/boot.bin
   ./kasm -d -import govnos/exports/boot govnos/kernel.asm govnos/kernel.bin
   ./kasm -d -import govnos/exports/boot govnos/info.asm govnos/info.bin
+  ./kasm -d govnos/scrclr.asm govnos/scrclr.bin
 }
 
 # Start

@@ -2,6 +2,7 @@
 import sys;
 
 def main(argc: int, argv: list):
+  def_tag: str = "com/";
   if (argc < 4):
     print("gload: not enough arguments");
     return 1;
@@ -15,7 +16,7 @@ def main(argc: int, argv: list):
   for byte in argv[3].encode():
     dest[startaddr] = byte;
     startaddr += 1;
-  for byte in b"\xF2com/\xF2\x00":
+  for byte in b"\xF2"+def_tag.encode()+b"\xF2\x00":
     dest[startaddr] = byte;
     startaddr += 1;
 

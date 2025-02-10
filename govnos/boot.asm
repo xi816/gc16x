@@ -470,7 +470,6 @@ drive_letter:    reserve 1 bytes
 ; D - directory
 ; G - filename
 ; S - address to store data from a file
-
 gfs_read_file:
   lds com_file_full
   str $F1 ; Load $F1 into com_file_full[0]

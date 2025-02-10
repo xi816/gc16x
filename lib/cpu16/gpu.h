@@ -71,7 +71,7 @@ enum ggcolors {
 
 U0 GGinit(gc_gg16* gg, SDL_Renderer* r) {
   gg->status = 0b00000000;
-  SDL_SetRenderDrawColor(r, 0, 0, 0, 0);
+  SDL_SetRenderDrawColor(r, 0, 0, 0, 255);
   SDL_RenderClear(r);
 }
 
