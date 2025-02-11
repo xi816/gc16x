@@ -12,13 +12,15 @@
 #include <cpu16/bpf.h>
 #include <cpu16/cpu16.h>
 #include <cpu16/cli.h>
+#include <cpu16/disasm.h>
 
 U8 usage() {
   puts("gc16: a Govno Core 16X emulator");
   puts("Syntax:");
-  puts("  gc16      [file]    Load the file directly to memory");
-  puts("  gc16 cli  [file]    Start the emulator in CLI mode");
-  puts("  gc16 disk [file]    Load the file as ROM");
+  puts("  gc16        [file]  Load the file directly to memory");
+  puts("  gc16 cli    [file]  Start the emulator in CLI mode");
+  puts("  gc16 disk   [file]  Load the file as ROM");
+  puts("  gc16 disasm [file]  Disassemble the binary file");
   puts("  gc16 help           Show help");
   return 0;
 }
@@ -37,12 +39,12 @@ U8 main(I32 argc, I8** argv) {
   srand(time(NULL));
   new_st;
   U16 driveboot;
-  U8 climode;
+  U8 climode = 0;
+  U8 disasmmode = 0;
   U8 argp = 1; // 256 arguments is enough for everyone
   U8* filename;
 
   driveboot = 0x0000;
-  climode = 0;
   parseArgs:
   if (argc == 1) {
     old_st;
@@ -65,6 +67,10 @@ U8 main(I32 argc, I8** argv) {
       usage();
       exit(1);
     }
+    else if ((!strcmp(argv[argp], "disasm")) || (!strcmp(argv[argp], "-d")) || (!strcmp(argv[argp], "--disasm"))) {
+      disasmmode = 1;
+      argp++;
+    }
     else {
       filename = argv[argp];
       break;
@@ -85,6 +91,12 @@ U8 main(I32 argc, I8** argv) {
     }
     fread(gc.mem, 1, 65536, fl);
     fclose(fl);
+    if (disasmmode) {
+      if (disasm(gc.mem, 65536, stdout) == 1) {
+        old_st;
+        return 1;
+      }
+    }
     // Disk signaures for GovnFS (without them, fs drivers would not work)
     gc.rom[0x00] = 0x60;
     gc.rom[0x11] = '#';
