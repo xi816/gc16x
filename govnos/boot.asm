@@ -467,7 +467,7 @@ drive_letter:    reserve 1 bytes
 
 ; gfs_read_file - Read the file in the drive (GovnFS filesystem) and
 ; copy the file contents into an address
-; D - directory
+; D - tag (UPDATE LATER)
 ; G - filename
 ; S - address to store data from a file
 gfs_read_file:

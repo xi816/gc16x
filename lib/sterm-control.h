@@ -13,4 +13,3 @@ void set_old_st(struct termios oldt) {
 
 #define old_st set_old_st(oldt)
 #define old_st_legacy system("stty icanon isig iexten echo");
-
