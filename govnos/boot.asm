@@ -524,6 +524,9 @@ flcpy:
   inx %gi
   jmp flcpy
 
+lcinit:
+  mb $F000 ','
+
 ; Boot GovnOS
 boot:
   lds st_msg
@@ -942,6 +945,7 @@ fre:
   sub %dx %bx
   add %dx $02
   lda %dx
+
   ldb *locale_delim
   call putid ; Output the number
 

@@ -1,6 +1,7 @@
 #include <time.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <stdint.h>
 #include <unistd.h>
 #include <string.h>
 #include <stdbool.h>
@@ -10,8 +11,8 @@
 #include <gc16x-types.h>
 #include <sterm-control.h>
 #include <cpu16/bpf.h>
-#include <cpu16/cpu16.h>
 #include <cpu16/cli.h>
+#include <cpu16/cpu16.h>
 #include <cpu16/disasm.h>
 
 U8 usage() {
@@ -124,9 +125,9 @@ U8 main(I32 argc, I8** argv) {
   GGinit(&(gc.gg), renderer);
 
   int runcode = 0xFF;
-  if (climode) runcode = ExecD(&gc);
+  tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+  if (climode) runcode = ExecD(&gc, 0);
   if (runcode == 0) {
-    old_st;
     return 0;
   }
   tcsetattr(STDIN_FILENO, TCSANOW, &newt);
@@ -144,5 +145,4 @@ U8 main(I32 argc, I8** argv) {
     fclose(fl);
   }
   return exec_errno;
-
 }

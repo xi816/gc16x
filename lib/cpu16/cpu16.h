@@ -2,8 +2,6 @@
 #include <cpu16/proc/std.h>
 #include <cpu16/proc/interrupts.h>
 #include <cpu16/gpu.h>
-#define ROMSIZE 65536 // Maximum for a 16-bit cpu
-#define MEMSIZE 65536 // Maximum for a 16-bit cpu
 
 #ifdef TRAKTORIST_MM
   #undef MEMSIZE
@@ -46,70 +44,6 @@
 #define RESET_NF(ps) (ps &= 0b11111101)
 #define RESET_CF(ps) (ps &= 0b11111110)
 
-union gcreg {
-  uint32_t dword;
-  uint16_t word;
-  uint8_t hl;
-};
-typedef union gcreg gcreg;
-
-// Register cluster
-struct gcrc {
-  gcbyte x;
-  gcbyte y;
-};
-typedef struct gcrc gcrc_t;
-
-// SIB byte
-struct gcsib {
-  gcbyte scale;
-  gcbyte index;
-  gcbyte base;
-};
-typedef struct gcrc SIBs;
-
-struct GC16X {
-  // Registers
-  // gcreg AX;    // Accumulator              $00
-  // gcreg BX;    // Base                     $01
-  // gcreg CX;    // Counter                  $02
-  // gcreg DX;    // Data                     $03
-  // gcreg SI;    // Segment (address)        $04
-  // gcreg GI;    // Segment #2 (address)     $05
-  // gcreg SP;    // Stack pointer            $06
-  // gcreg BP;    // Base pointer             $07
-
-  // gcreg EX;    // Extra accumulator        $08
-  // gcreg FX;    // Extra accumulator        $09
-  // gcreg HX;    // High byte                $0A
-  // gcreg LX;    // Low byte                 $0B
-  // gcreg X;     // X character              $0C
-  // gcreg Y;     // Y character              $0D
-  // gcreg IX;    // X index                  $0E
-  // gcreg IY;    // Y index                  $0F
-  gcreg reg[16];
-
-  gcbyte PS;   // -I---ZNC                 Unaddressable
-  uint32_t PC; // Program counter          Unaddressable
-
-  // Memory and ROM
-  gcbyte mem[MEMSIZE];
-  gcbyte rom[ROMSIZE];
-  gcbyte pin;
-
-  // Prefix flags
-  // disp_prefix - 0x90 | si -> bit 3 (least significant)
-  gcbyte disp_prefix; // Displacement prefix: define registers added to the address used in the instruction.
-                      // Can be: $91,$92,$93,$94,$95,$96,$97,$98,$99,$9A,$9B,$9C,$9D,$9E,$9F
-  gcbyte sib_prefix;  // Scale-Index-Base prefix: define SIB added to the immediate used in the instruction.
-                      // Opcode: $24
-
-  // GPU
-  gc_gg16 gg;
-  SDL_Renderer* renderer;
-};
-typedef struct GC16X GC;
-
 U8 errno;
 
 U0 Reset(GC* gc);
@@ -137,16 +71,6 @@ U0 WriteWord(GC* gc, U16 addr, U16 val) {
 }
 
 gcword* ReadReg(GC* gc, U8 regid) {
-  // PC register cannot be changed from
-  // {REG} addressing instruction. It
-  // can only be changed using JMP, CALL,
-  // and other control flow instructions.
-  // U16* regids[16] = {
-  //   &(gc->reg[AX].word), &(gc->reg[BX].word), &(gc->reg[CX].word), &(gc->reg[DX].word), // 00-03
-  //   &(gc->reg[SI].word), &(gc->reg[GI].word), &(gc->reg[SP].word), &(gc->reg[BP].word), // 04-07
-  //   &(gc->reg[EX].word), &(gc->reg[FX].word), &(gc->reg[HX].word), &(gc->reg[LX].word), // 08-0B
-  //   &(gc->reg[X].word),  &(gc->reg[Y].word),  &(gc->reg[IX].word), &(gc->reg[IY].word)  // 0C-0F
-  // };
   return &gc->reg[regid].word;
 }
 
@@ -331,11 +255,13 @@ U8 INT1(GC* gc) {
 
 // 0F 9D - Trap and show the stack and registers (debug)
 U8 TRAP(GC* gc) {
-  printf("\n\033[31mTrapped\033[0m at \033[33m%04X\033[0m\n", gc->PC);
-  StackDump(gc, 20);
-  RegDump(gc);
-  puts("-- Press any key to continue --");
-  getchar();
+  // printf("\n\033[31mTrapped\033[0m at \033[33m%04X\033[0m\n", gc->PC);
+  // StackDump(gc, 20);
+  // RegDump(gc);
+  // puts("-- Press any key to continue --");
+  // getchar();
+  old_st_legacy;
+  ExecD(gc, 1);
   gc->PC++;
   return 0;
 }
