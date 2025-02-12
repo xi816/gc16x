@@ -32,6 +32,11 @@ U8 cli_DisplayMem(GC* gc, U8 page) {
   return 0;
 }
 
+U8 cli_InsertMem(GC* gc, U16 addr, U8 byte) {
+  gc->mem[addr] = byte;
+  return 0;
+}
+
 U8 ExecD(GC* gc, U8 trapped) {
   char* inpt;
   char* tokens[10];
@@ -59,12 +64,20 @@ U8 ExecD(GC* gc, U8 trapped) {
   case 'r':
     cli_DisplayReg(gc);
     break;
+  case 'c':
+    fputs("\033[H\033[2J", stdout);
+    break;
   case 'm':
     if (j == 2)
       cli_DisplayMem(gc, strtol(tokens[1], NULL, 16));
     break;
+  case 'i':
+    if (j == 3)
+      cli_InsertMem(gc, strtol(tokens[1], NULL, 16), strtol(tokens[2], NULL, 16));
+    break;
   case 'h':
     puts("gc16x cli help:");
+    puts("  c       Clear the screen");
     puts("  h       Show help");
     puts("  m <00>  Dump memory");
     puts("  r       Dump registers");

@@ -10,8 +10,8 @@ reboot: jmp boot
 
 ; write - Output the buffer
 ; Arguments:
-; S - buffer address
-; C - number of characters to output
+; si - buffer address
+; cx - number of characters to output
 write:
   ldd $00
   sub %cx $01
@@ -24,7 +24,7 @@ write:
 
 ; puts - Output string until NUL ($00)
 ; Arguments:
-; S - string address
+; si - string address
 puts:
   cmp *%si $00
   re
@@ -35,8 +35,8 @@ puts:
 
 ; dpputs - Output string from disk until NUL ($00) or predicate
 ; Arguments:
-; B - predicate character
-; S - string address
+; bx - predicate character
+; si - string address
 dpputs:
   ldds
   cmp %ax $00
@@ -50,8 +50,8 @@ dpputs:
 
 ; strtok - Progress the string pointer until character
 ; Arguments:
-; S - string address
-; B - end character
+; si - string address
+; bx - end character
 ; (also affects dynptr)
 strtok:
   inx %si
@@ -62,8 +62,8 @@ strtok:
 
 ; dstrtok - Progress the string pointer{disk} until character
 ; Arguments:
-; S - string address
-; B - end character
+; si - string address
+; bx - end character
 ; (also affects dynptr)
 dstrtok:
   ldds
@@ -82,8 +82,8 @@ dstrtok:
 
 ; dbstrtok - Progress back the string pointer{disk} until character
 ; Arguments:
-; S - string address
-; B - end character
+; si - string address
+; bx - end character
 ; (also affects dynptr)
 dbstrtok:
   ldds
@@ -102,7 +102,7 @@ dbstrtok:
 
 ; inttostr - Convert a 16_bit integer into a string
 ; Arguments:
-; A - Number
+; ax - Number
 inttostr:
   ldg inttostr_buf
   add %gi $04
@@ -129,8 +129,8 @@ inttostr_clr:
 
 ; inttostr - Convert a 16-bit integer into a string with delimiters
 ; Arguments:
-; A - Number
-; B - Locale delimitor symbol
+; ax - Number
+; bx - Locale delimitor symbol
 inttostrl:
   ldg inttostrl_buf
   ldc $00
@@ -173,7 +173,7 @@ inttostrl_clr:
 
 ; puti - Output a 16-bit integer number
 ; Arguments:
-; A - Number
+; ax - Number
 puti:
   call inttostr
   lds inttostr_buf
@@ -184,8 +184,8 @@ puti:
 
 ; putid - Output a 16-bit integer number with delimiters
 ; Arguments:
-; A - Number
-; B - Locale delimiter
+; ax - Number
+; bx - Locale delimiter
 putid:
   call inttostrl
   lds inttostrl_buf
@@ -209,10 +209,10 @@ zputi: ; Using bx,cx,dx,gi
 
 ; strcmp - Check if two strings are equal
 ; Arguments:
-; A - first string address
-; B - second string address
+; ax - first string address
+; bx - second string address
 ; Returns:
-; A - status
+; ax - status
 strcmp:
   lds *%ax
   ldg *%bx
@@ -232,11 +232,11 @@ strcmp:
 
 ; pstrcmp - Check if two strings are equal ending in a predicate
 ; Arguments:
-; A - first string address
-; B - second string address
-; C - predicate character
+; ax - first string address
+; bx - second string address
+; cx - predicate character
 ; Returns:
-; A - status
+; ax - status
 pstrcmp:
   lds *%ax
   ldg *%bx
@@ -256,10 +256,10 @@ pstrcmp:
 
 ; dstrcmp - Check if two strings are equal (first pointer being on the disk)
 ; Arguments:
-; S - first string address{disk}
-; G - second string address
+; si - first string address{disk}
+; gi - second string address
 ; Returns:
-; A - status
+; ax - status
 dstrcmp:
   ldds
   ldb *%gi
@@ -281,9 +281,9 @@ dstrcmp:
 
 ; strnul - Check if string is empty
 ; Arguments:
-; A - string address
+; ax - string address
 ; Returns:
-; A - status
+; ax - status
 strnul:
   cmp *%ax $00
   jme .nul
@@ -295,9 +295,9 @@ strnul:
 
 ; memcpy - Copy memory location into an other area
 ; Arguments:
-; A - Target
-; B - Destination
-; C - Number of bytes to copy
+; ax - Target
+; bx - Destination
+; cx - Number of bytes to copy
 memcpy:
   lds *%ax
   ldg %bx
@@ -309,8 +309,8 @@ memcpy:
 
 ; strcpy - Copy one string into another location
 ; Arguments:
-; A - Target
-; B - Destination
+; ax - Target
+; bx - Destination
 strcpy:
   lds *%ax
   ldg %bx
@@ -323,9 +323,9 @@ strcpy:
 
 ; dstrsubset - Find a specific string in the disk
 ; Arguments:
-; S - address{disk}
-; G - address to the string{mem}
-; At the end, S should point to the end of that string on the disk
+; si - address{disk}
+; gi - address to the string{mem}
+; At the end, si should point to the end of that string on the disk
 dstrsubset:
   ldb *%gi
 
@@ -352,7 +352,7 @@ dstrsubset:
 
 ; scani - Scan an integer from standard input
 ; Returns:
-; A - number
+; ax - number
 scani:
   lda $00
 .loop:
@@ -378,7 +378,7 @@ scani:
   jmp .loop
 
 ; scans - Scan a string from standard input
-; S - buffer address 0040
+; si - buffer address 0040                       UPD. idk what 0040 means
 scans:
   int $01    ; Get character from input
   pop %dx
@@ -467,9 +467,9 @@ drive_letter:    reserve 1 bytes
 
 ; gfs_read_file - Read the file in the drive (GovnFS filesystem) and
 ; copy the file contents into an address
-; D - tag (UPDATE LATER)
-; G - filename
-; S - address to store data from a file
+; dx - tag (UPDATE LATER)
+; gi - filename
+; si - address to store data from a file
 gfs_read_file:
   lds com_file_full
   str $F1 ; Load $F1 into com_file_full[0]
