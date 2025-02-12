@@ -160,7 +160,7 @@ def Lex(prog: str, filename: str):
           buf += prog[pos];
         pos += 1;
       pos += 1;
-      toks.append((T_STR, buf));
+      toks.append((T_STR, buf.encode()));
       buf = "";
     elif (prog[pos] == "'"):
       pos += 1;
@@ -742,7 +742,7 @@ def Parse(toks: list, filename: str, expm: int) -> list:
           pc += 1;
         elif (toks[pos][0] == T_STR):
           for i in toks[pos][1]:
-            ast[-1][2].append(ord(i));
+            ast[-1][2].append(i);
           pc += len(toks[pos][1]);
         else:
           print(f"Your raw bytes are cooked bro. {HUMAN_TOKS[toks[pos][0]]}");
