@@ -86,7 +86,7 @@ U8 main(I32 argc, I8** argv) {
   if (!driveboot) { // Load a memory dump
     FILE* fl = fopen(filename, "rb");
     if (fl == NULL) {
-      fprintf(stderr, "\033[31mError\033[0m while opening %s\n", argv[1]);
+      fprintf(stderr, "\033[31mError\033[0m while opening %s\n", filename);
       old_st;
       return 1;
     }
@@ -107,7 +107,7 @@ U8 main(I32 argc, I8** argv) {
   else { // Load a disk
     FILE* fl = fopen(filename, "rb");
     if (fl == NULL) {
-      fprintf(stderr, "\033[31mError\033[0m while opening %s\n", argv[2]);
+      fprintf(stderr, "\033[31mError\033[0m while opening %s\n", filename);
       old_st;
       return 1;
     }
@@ -137,7 +137,7 @@ U8 main(I32 argc, I8** argv) {
   if (driveboot) { // Save the modified disk back
     FILE* fl = fopen(argv[2], "wb");
     if (fl == NULL) {
-      fprintf(stderr, "\033[31mError\033[0m while opening %s\n", argv[2]);
+      fprintf(stderr, "\033[31mError\033[0m while opening %s\n", filename);
       old_st;
       return 1;
     }
