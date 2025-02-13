@@ -1,0 +1,2 @@
+#!/bin/bash
+gcc prepare-disk.c -o ../prepare-disk;

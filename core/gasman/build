@@ -1,9 +1,2 @@
 #!/usr/bin/bash
-
-build () {
-  gcc main.c -I../../lib -o ../../gasman;
-}
-
-# Build
-build;
-
+gcc main.c -I../../lib -o ../../gasman;

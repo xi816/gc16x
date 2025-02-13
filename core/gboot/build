@@ -1,9 +1,2 @@
 #!/usr/bin/bash
-
-build () {
-  gcc main.c -o ../../gboot "$@";
-}
-
-# Build
-build;
-
+gcc main.c -o ../../gboot "$@";
