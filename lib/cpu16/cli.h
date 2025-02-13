@@ -15,9 +15,9 @@ U8 cli_DisplayReg(GC* gc) {
     if ((i != 0) && !(i%4)) putchar(10);
     printf("%s:\033[93m$%04X\033[0m  ", regf[i], gc->reg[i]);
   }
-  printf("\nPS:\033[93m$%04X\033[0m  ", gc->PS);
+  printf("\nPS:\033[93m%08b\033[0m  ", gc->PS);
   printf("PC:\033[93m$%04X\033[0m  ", gc->PC);
-  printf("\n-I----ZNC\n");
+  printf("\n   -I---ZNC\n");
 }
 
 U8 cli_DisplayMem(GC* gc, U8 page) {
