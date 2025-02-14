@@ -44,7 +44,7 @@
 #define RESET_NF(ps) (ps &= 0b11111101)
 #define RESET_CF(ps) (ps &= 0b11111110)
 
-U8 errno;
+U8 gc_errno;
 
 U0 Reset(GC* gc);
 U0 PageDump(GC* gc, U8 page);
@@ -104,7 +104,7 @@ U8 UNK(GC* gc) {    // Unknown instruction
   }
   fprintf(stderr, "\033[31mIllegal\033[0m instruction \033[33m%02X\033[0m\nAt position %04X\n", gc->mem[gc->PC], gc->PC);
   old_st_legacy;
-  errno = 1;
+  gc_errno = 1;
   return 1;
 }
 
@@ -198,7 +198,7 @@ U8 INT(GC* gc, bool ri) {
   switch (val) {
     case INT_EXIT: {
       old_st_legacy;
-      errno = StackPop(gc);
+      gc_errno = StackPop(gc);
       return 1;
     }
     case INT_READ: {
@@ -1287,7 +1287,7 @@ U8 Exec(GC* gc, const U32 memsize) {
   U8 exc = 0;
   execloop:
     exc = (INSTS[gc->mem[gc->PC]])(gc);
-    if (exc != 0) return errno;
+    if (exc != 0) return gc_errno;
     goto execloop;
   return exc;
 }
