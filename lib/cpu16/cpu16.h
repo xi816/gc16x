@@ -209,7 +209,7 @@ U8 INT(GC* gc, bool ri) {
       putchar(StackPop(gc));
       fflush(stdout);
       break;
-    }  
+    }
     case INT_RESET: {
       Reset(gc);
       return 0;

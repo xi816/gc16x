@@ -20,20 +20,14 @@ def main(argc: int, argv: list):
     dest[startaddr] = byte;
     startaddr += 1;
 
-  E0_encoded = 0;
   for byte in src:
-    if (E0_encoded):
-      dest[startaddr+1] = (byte+0xE0) % 256;
-      startaddr += 1;
-      E0_encoded = 0;
-      continue;
     if (byte < 0xE0):
       dest[startaddr] = byte;
       startaddr += 1;
     else:
-      E0_encoded = 1;
-      startaddr += 1;
-      continue;
+      dest[startaddr] = 0xE0;
+      dest[startaddr+1] = (byte - 0xE0) % 256;
+      startaddr += 2;
   dest[startaddr] = 0xF1;
   startaddr += 1;
   dest[startaddr] = 0xF7;

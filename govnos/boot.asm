@@ -504,6 +504,7 @@ gfs_disk_space:
 ; Arguments:
 ; si - file contents address{disk}
 ; gi - address where the file will be loaded{mem}
+
 flcpy:
   ldds
   cmp %ax $F1
