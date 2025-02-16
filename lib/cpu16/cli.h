@@ -20,6 +20,21 @@ U8 cli_DisplayReg(GC* gc) {
   printf("\n   -I---ZNC\n");
 }
 
+U8 putmc(U8 c) {
+  switch (c) {
+  case 0x00 ... 0x1F:
+    putchar('.');
+    break;
+  case 0x20 ... 0x7E:
+    putchar(c);
+    break;
+  case 0x80 ... 0xFF:
+    putchar('~');
+    break;
+  }
+  return 0;
+}
+
 U8 cli_DisplayMem(GC* gc, U8 page) {
   fputs("\033[A", stdout);
   for (U32 i = page*256; i < page*256+256; i++) {
@@ -27,6 +42,18 @@ U8 cli_DisplayMem(GC* gc, U8 page) {
       printf("\n%04X  ", i);
     }
     printf("%02X ", gc->mem[i]);
+  }
+  putchar(10);
+  return 0;
+}
+
+U8 cli_DisplayMemX(GC* gc, U8 page) {
+  fputs("\033[A", stdout);
+  for (U32 i = page*256; i < page*256+256; i++) {
+    if (!(i % 16)) {
+      printf("\n%04X  ", i);
+    }
+    putmc(gc->mem[i]);
   }
   putchar(10);
   return 0;
@@ -70,6 +97,10 @@ U8 ExecD(GC* gc, U8 trapped) {
   case 'm':
     if (j == 2)
       cli_DisplayMem(gc, strtol(tokens[1], NULL, 16));
+    break;
+  case 'M':
+    if (j == 2)
+      cli_DisplayMemX(gc, strtol(tokens[1], NULL, 16));
     break;
   case 'i':
     if (j == 3)

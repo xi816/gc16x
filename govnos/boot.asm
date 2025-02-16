@@ -378,7 +378,7 @@ scani:
   jmp .loop
 
 ; scans - Scan a string from standard input
-; si - buffer address 0040                       UPD. idk what 0040 means
+; si - buffer address
 scans:
   int $01    ; Get character from input
   pop %dx
@@ -601,7 +601,6 @@ com_govnos:
   dex %si
   ldd $00
   storb %dx ; Load $00 (NUL) instead of $0A (Enter)
-
   lds qptr
   storb %dx
 
@@ -667,13 +666,6 @@ com_govnos:
   call strcmp
   cmp %ax $00
   jme com_govnos
-
-  ; reboot
-  lda cline
-  ldb instFULL_rebt
-  call strcmp
-  cmp %ax $00
-  jme com_govnosEXEC_reboot
 
   ; drive
   lda cline
@@ -920,7 +912,6 @@ instFULL_colr: bytes "color^@"
 instFULL_help: bytes "help^@"
 instFULL_hlt:  bytes "hlt^@"
 instFULL_exit: bytes "exit^@"
-instFULL_rebt: bytes "reboot^@"
 instFULL_retr: bytes "retr^@"
 instFULL_info: bytes "info^@"
 instFULL_drve: bytes "drive^@"
