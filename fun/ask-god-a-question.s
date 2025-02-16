@@ -1,13 +1,13 @@
 jmp main
 
 puts:
-  ldd %s
+  ldd %si
   lodsb
-  push %s
+  push %si
   int $02
-  cmp %s $00
-  lds %d
-  inx %s
+  cmp %si $00
+  lds %dx
+  inx %si
   jmne puts
   ret
 
@@ -23,24 +23,24 @@ main:
   int $00
 input:
   int $01    ; Get character from input
-  pop %d     ; Save to D register
-  cmp %d $7F ; Check for Backspace (1)
+  pop %dx     ; Save to D register
+  cmp %dx $7F ; Check for Backspace (1)
   jme input-bs
-  cmp %d $08 ; Check for Backspace (2)
+  cmp %dx $08 ; Check for Backspace (2)
   jme input-bs
-  push %d    ; Output the
+  push %dx    ; Output the
   int $02    ; character
   lds question
   ldg *qptr
-  add %s %g
-  storb %d
+  add %si %gi
+  storb %dx
   inx qptr
-  cmp %d $0A ; Check for Enter
+  cmp %dx $0A ; Check for Enter
   re
   jmp input
 input-bs: ; Handle backspace ($7F or $08)
   ldg *qptr
-  cmp %g $00
+  cmp %gi $00
   jme input
 input-bs-strict:
   dex qptr
@@ -49,16 +49,16 @@ input-bs-strict:
   jmp input
 
 answer-lb:
-  ldc #200
+  ldc 200
   answer:
     int $21
-    push %d
+    push %dx
     int $02
     loop answer
   jmp main
 
 askgod:   bytes "Ask God a question: ^@"
 bs-seq:   bytes "^H ^H^@"
-question: reserve #64 bytes
-qptr:     reserve #1 bytes
+question: reserve 64 bytes
+qptr:     reserve 1 bytes
 
