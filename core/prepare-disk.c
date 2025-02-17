@@ -31,6 +31,7 @@ int32_t main(int argc, char** argv) {
   system("./kasm -d -import govnos/exports/boot govnos/info.asm govnos/info.bin");
   system("./kasm -d -import govnos/exports/boot govnos/date.asm govnos/date.bin");
   system("./kasm -d -import govnos/exports/boot govnos/gsfetch.asm govnos/gsfetch.bin");
+  system("./kasm -d -import govnos/exports/boot govnos/reboot.asm govnos/reboot.bin");
   system("./kasm -d govnos/scrclr.asm govnos/scrclr.bin");
 
   // Load GovnOS
@@ -41,5 +42,6 @@ int32_t main(int argc, char** argv) {
   sprintf(fcom, "./gload %s govnos/date.bin \"date\"", argv[1]); system(fcom);
   sprintf(fcom, "./gload %s govnos/gsfetch.bin \"gsfetch\"", argv[1]); system(fcom);
   sprintf(fcom, "./gload %s govnos/scrclr.bin \"scrclr\"", argv[1]); system(fcom);
+  sprintf(fcom, "./gload %s govnos/reboot.bin \"reboot\"", argv[1]); system(fcom);
   return 0;
 }

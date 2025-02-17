@@ -624,13 +624,6 @@ com_govnos:
   cmp %ax $00
   jme com_govnosEXEC_cls
 
-  ; color
-  lda cline
-  ldb instFULL_colr
-  call strcmp
-  cmp %ax $00
-  jme com_govnosEXEC_color
-
   ; help
   lda cline
   ldb instFULL_help
@@ -728,20 +721,6 @@ com_govnosEXEC_dir:
 com_govnosEXEC_cls:
   lds cls_seq
   call puts
-  jmp com_govnos.aftexec
-
-com_govnosEXEC_color:
-  lds color00_msg
-  call puts
-  call scani
-
-  push '^[' int $02
-  push '['  int $02
-  push '3'  int $02
-  call puti
-  push 'm'  int $02
-  push '$'  int $02
-
   jmp com_govnos.aftexec
 
 com_govnosEXEC_help:
@@ -908,7 +887,6 @@ cls_seq:       bytes "^[[H^[[2J^@"
 ; Commands
 instFULL_dir:  bytes "dir^@"
 instFULL_cls:  bytes "cls^@"
-instFULL_colr: bytes "color^@"
 instFULL_help: bytes "help^@"
 instFULL_hlt:  bytes "hlt^@"
 instFULL_exit: bytes "exit^@"
