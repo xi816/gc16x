@@ -1,2 +1,0 @@
-#!/bin/bash
-gcc asm.c -I../lib -o ../ochkasm;

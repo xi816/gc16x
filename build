@@ -1,2 +1,0 @@
-#!/bin/bash
-gcc core/main.c -Ilib -lSDL2 -o gc16;
