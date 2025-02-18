@@ -6,9 +6,11 @@
 #include <ctype.h>
 
 #define TOKENS_CAPACITY 1024
+#define INSTS_CAPACITY 1024
 
 uint32_t p = 0; // Lexer position
 uint16_t line = 1; // 65'536 lines is enough for everybody
+uint16_t pc = 0; // Parser PC register for instruction addresses
 
 typedef enum {
   TK_INST,
@@ -23,8 +25,32 @@ typedef struct {
   uint16_t line; // 65'536 lines is enough for everybody
 } Token;
 
+typedef enum {
+  INST_PUSH,
+  INST_INT,
+  PARSER_EOF
+} Opcode;
+
+typedef enum {
+  OP_NULL = 0,
+  OP_IMM16,
+  OP_REG16,
+  OP_RC16
+} OperandType;
+
+typedef struct {
+  Opcode mnemonic;
+  OperandType optype;
+  size_t operand1;
+  size_t operand2;
+  uint16_t pc;
+} Inst;
+
 Token tokens[TOKENS_CAPACITY];
 uint32_t tp = 0; // tp points to the last token offset in Token* plus one
+
+Inst insts[INSTS_CAPACITY]; // Parser output
+uint32_t ip = 0; // ip points to the last instruction in the AST (Inst*) plus one
 
 char* GC_INSTS[] = {
   "push", "int"
@@ -111,6 +137,8 @@ uint8_t kasm_lex_file(char* src, char* filename) {
         break;
       default:
         printf("kasm: lexer: unknown character `%c`\n", src[p]);
+        printf("kasm: lexer: hex code $%02X\n", src[p]);
+        exit(1);
     }
   }
   tokens[tp++] = (Token){.type=TK_EOF, .value = (size_t)0};
@@ -137,6 +165,60 @@ void kasm_output_tokens() {
   }
 }
 
+void kasm_parse_file(char* filename) {
+  while (tokens[p].type != TK_EOF) {
+    // printf("p: %d\n", p);
+    if (tokens[p].type == TK_INST) {
+      if (!strcmp((char*)tokens[p].value, "push")) {
+        if (tokens[p+1].type == TK_INT) {
+           insts[ip++] = (Inst){.mnemonic=INST_PUSH, .optype=OP_IMM16, .operand1=(uint16_t)tokens[p+1].value, .pc=pc};
+           pc += 4;
+           p += 2;
+        }
+        else {
+           fprintf(stderr, "kasm: parser error: illegal `push` opcode\n");
+           exit(1);
+        }
+      }
+      else if (!strcmp((char*)tokens[p].value, "int")) {
+        if (tokens[p+1].type == TK_INT) {
+          insts[ip++] = (Inst){.mnemonic=INST_INT, .optype=OP_IMM16, .operand1=(uint8_t)tokens[p+1].value, .pc=pc};
+          pc += 3;
+          p += 2;
+        }
+        else {
+          fprintf(stderr, "kasm: parser error: illegal `int` opcode\n");
+          exit(1);
+        }
+      }
+      else {
+        fprintf(stderr, "kasm: parser error: unhandled instruction `%s`\n", (char*)tokens[p].value);
+        exit(1);
+      }
+    }
+    else {
+      fprintf(stderr, "kasm: parser error: expected instruction, found something else\n");
+      exit(1);
+    }
+  }
+  insts[ip++] = (Inst){.mnemonic=PARSER_EOF, .optype=OP_NULL, .operand1=(size_t)0, .pc=pc};
+}
+
+void kasm_output_insts() {
+  for (uint32_t i = 0; insts[i].mnemonic != PARSER_EOF; i++) {
+    if ((insts[i].mnemonic == INST_PUSH) && (insts[i].optype == OP_IMM16)) {
+      printf("%04X    push $%04X\n", insts[i].pc, (uint16_t)insts[i].operand1);
+    }
+    else if ((insts[i].mnemonic == INST_INT) && (insts[i].optype == OP_IMM16)) {
+      printf("%04X    int $%02X\n", insts[i].pc, (uint8_t)insts[i].operand1);
+    }
+    else {
+      fprintf(stderr, "kasm: parser output: unexpected token type");
+      exit(1);
+    }
+  }
+}
+
 void usage(void) {
   puts("Syntax: kasm <file.asm> <file.bin>");
 }
@@ -153,11 +235,19 @@ int main(int argc, char** argv) {
     return 1;
   }
   fseek(fl, 0, SEEK_END);
-  uint32_t srclen = ftell(fl);
+  uint32_t srclen = ftell(fl)+1;
   fseek(fl, 0, SEEK_SET);
   uint8_t src[srclen];
   fread(src, 1, srclen, fl);
+  src[srclen-1] = 0;
   fclose(fl);
   kasm_lex_file(src, argv[1]);
+  puts("Emitting tokens:");
   kasm_output_tokens();
+  p = 0; // Reset p so we can use it for the parser too
+  kasm_parse_file(argv[1]);
+  puts("\nEmitting AST:");
+  kasm_output_insts();
+
+  return 0;
 }
