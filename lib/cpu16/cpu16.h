@@ -639,7 +639,7 @@ U8 CLI(GC* gc) {   // 52
 
 // 40-4F -- Load imm16 to reg16
 U8 LDr0(GC* gc) {
-  *ReadReg(gc, gc->mem[gc->PC]-0x40) = ReadWord(gc, gc->PC+1);
+  gc->reg[gc->mem[gc->PC]-0x40].word = ReadWord(gc, gc->PC+1);
   gc->PC += 3;
   return 0;
 }
