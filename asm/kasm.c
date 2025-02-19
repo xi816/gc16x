@@ -7,6 +7,7 @@
 
 #define TOKENS_CAPACITY 1024
 #define INSTS_CAPACITY 1024
+#define ASSEMBLE_CAPACITY 65536
 
 uint32_t p = 0; // Lexer position
 uint16_t line = 1; // 65'536 lines is enough for everybody
@@ -52,6 +53,9 @@ uint32_t tp = 0; // tp points to the last token offset in Token* plus one
 Inst insts[INSTS_CAPACITY]; // Parser output
 uint32_t ip = 0; // ip points to the last instruction in the AST (Inst*) plus one
 
+uint8_t bc[ASSEMBLE_CAPACITY];
+uint32_t bp = 0; // bp points to the last byte assembled to the assembler buffer
+
 char* GC_INSTS[] = {
   "push", "int"
 };
@@ -70,6 +74,11 @@ void piss_off(char* filename) {
   puts("I won't even lex that file until you remove the tabs");
   puts("kasm (c), 2'025");
   exit(1);
+}
+
+void put_word(uint16_t word) {
+  bc[bp++] = word % 256;
+  bc[bp++] = word >> 8;
 }
 
 void kasm_lex_number(char* src, char* filename) {
@@ -219,13 +228,39 @@ void kasm_output_insts() {
   }
 }
 
+void kasm_compile_file(char* filename) { // filename will be used for error output
+  while (insts[p].mnemonic != PARSER_EOF) {
+    if ((insts[p].mnemonic == INST_PUSH) && (insts[p].optype == OP_IMM16)) { // push imm16
+      bc[bp++] = 0x0F;
+      bc[bp++] = 0x84;
+      put_word((uint16_t)insts[p].operand1);
+      p++;
+    }
+    else if ((insts[p].mnemonic = INST_INT) && (insts[p].optype == OP_IMM16)) { // int imm8
+      bc[bp++] = 0x0F;
+      bc[bp++] = 0xC2;
+      bc[bp++] = (uint8_t)insts[p].operand1;
+      p++;
+    }
+    else {
+      fprintf(stderr, "kasm: error: unhandled instruction of type %d\n", insts[p].mnemonic);
+      exit(1);
+    }
+  }
+}
+
 void usage(void) {
   puts("Syntax: kasm <file.asm> <file.bin>");
 }
 
 int main(int argc, char** argv) {
-  if (argc == 1) {
+  if (argc < 3) {
     puts("kasm: fatal error: too few argumets given");
+    usage();
+    return 1;
+  }
+  else if (argc > 3) {
+    fprintf(stderr, "kasm: fatal error: expected 2 arguments, got %d", argc-1);
     usage();
     return 1;
   }
@@ -248,6 +283,16 @@ int main(int argc, char** argv) {
   kasm_parse_file(argv[1]);
   puts("\nEmitting AST:");
   kasm_output_insts();
+  p = 0; // Reset p so we can use it for the assembler
+  kasm_compile_file(argv[1]);
+  printf("kasm: %s: assembled %d bytes\n", argv[1], bp);
+  for (uint16_t i = 0; i < bp; i++) {
+    printf("%02X ", bc[i]);
+  }
+  puts("\b");
+  FILE* output = fopen(argv[2], "wb");
+  fwrite(bc, 1, bp, output);
+  fclose(output);
 
   return 0;
 }
