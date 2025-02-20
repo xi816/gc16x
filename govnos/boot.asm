@@ -670,6 +670,7 @@ com_govnos:
   ; Load the file from the disk
   lda cline
   ldd $3000
+  mov %fx com_file_sign
   call gfs_read_file
     cmp %bx $01
     jme .aftexec
@@ -877,6 +878,7 @@ locale_delim:      bytes ","
 
 ; GovnFS signatures
 com_file_sign: bytes $F2 "com/" $F2 $00
+txt_file_sign: bytes $F2 "txt/" $F2 $00
 com_file_full: reserve 96 bytes
 dir_tag:       bytes $F2 "com/" $F2 $00
 
