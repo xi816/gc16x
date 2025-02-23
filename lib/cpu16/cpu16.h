@@ -626,7 +626,7 @@ U8 CLC(GC* gc) {   // 36
 }
 
 U8 HLT(GC* gc) {   // 51
-  while(1) {}
+  for(;;) {} // Zahotel zahotel
   gc->PC++;
   return 0;
 }
@@ -644,8 +644,17 @@ U8 LDr0(GC* gc) {
   return 0;
 }
 
-U8 LDAZ(GC* gc) {   // -- LDA mz8
+U8 LDAZ(GC* gc) {   // idk -- LDA mz8
   gc->reg[AX].word = gc->mem[gc->mem[gc->PC+1]];
+  gc->PC += 2;
+  return 0;
+}
+
+// POW rc - Calcaulate pow(rc1, rc2) and store to rc1
+// Opcode: 64
+U8 POW11(GC* gc) {
+  gcrc_t rc = ReadRegClust(gc->mem[gc->PC+1]);
+  gc->reg[rc.x].word = (U16)pow(gc->reg[rc.x].word, gc->reg[rc.y].word);
   gc->PC += 2;
   return 0;
 }
@@ -996,6 +1005,14 @@ U8 CMPpi(GC* gc) {
   return 0;
 }
 
+// POW reg16 imm8 - Calcaulate pow(reg16, imm8) and store to reg16
+// Opcode: 74 01 04
+U8 POW10(GC* gc) {
+  gc->reg[gc->mem[gc->PC+1]].word = (U16)pow(gc->reg[gc->mem[gc->PC+1]].word, gc->mem[gc->PC+2]);
+  gc->PC += 3;
+  return 0;
+}
+
 // 88 - Exchange two registers
 U8 XCHG4(GC* gc) {
   gcrc_t rc = ReadRegClust(gc->mem[gc->PC+1]);
@@ -1155,8 +1172,8 @@ U8 (*INSTS[256])() = {
   &UNK  , &UNK  , &UNK  , &RET  , &STI  , &UNK  , &CLC  , &UNK  , &UNK  , &UNK  , &UNK  , &RNE  , &UNK  , &UNK  , &UNK  , &UNK  ,
   &LDr0 , &LDr0 , &LDr0 , &LDr0 , &LDr0 , &LDr0 , &LDr0 , &LDr0 , &LDr0 , &LDr0 , &LDr0 , &LDr0 , &LDr0 , &LDr0 , &LDr0 , &LDr0 ,
   &UNK  , &HLT  , &CLI  , &LDAA , &LDBA , &LDCA , &LDDA , &LDSA , &LDGA , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
-  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &PG66 , &UNK  , &UNK  , &CMPpi, &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
-  &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &LDA1 , &LDB1 , &LDC1 , &LDD1 , &LDS1 , &LDG1 , &LDSP1, &LDBP1, &UNK  ,
+  &UNK  , &UNK  , &UNK  , &UNK  , &POW11, &UNK  , &PG66 , &UNK  , &UNK  , &CMPpi, &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,
+  &UNK  , &UNK  , &UNK  , &UNK  , &POW10, &UNK  , &UNK  , &LDA1 , &LDB1 , &LDC1 , &LDD1 , &LDS1 , &LDG1 , &LDSP1, &LDBP1, &UNK  ,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &XCHG4, &UNK  , &LODSW, &STOSW, &UNK  , &UNK  , &UNK  , &UNK  ,
   &DEXM , &_PREF, &_PREF, &_PREF, &_PREF, &_PREF, &_PREF, &_PREF, &_PREF, &_PREF, &_PREF, &_PREF, &_PREF, &_PREF, &_PREF, &_PREF,
   &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  , &UNK  ,

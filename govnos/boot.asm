@@ -100,7 +100,7 @@ dbstrtok:
   ldb $00
   ret
 
-; inttostr - Convert a 16_bit integer into a string
+; inttostr - Convert a 16-bit integer into a string
 ; Arguments:
 ; ax - Number
 inttostr:

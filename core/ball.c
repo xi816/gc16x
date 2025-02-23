@@ -16,7 +16,7 @@ int32_t main(void) {
   char* commands[] = {
     "gcc core/ball.c -o ball",
     "gcc core/prepare-disk.c -o prepare-disk",
-    "gcc core/main.c -Ilib -lSDL2 -o gc16",
+    "gcc core/main.c -Ilib -lSDL2 -lm -o gc16",
     "gcc core/gasman/main.c -Ilib -o gasman",
     "gcc core/gboot/main.c -o gboot",
     "gcc core/ugovnfs/main.c -Ilib -o ugovnfs"
