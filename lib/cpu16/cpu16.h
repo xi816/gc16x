@@ -1006,7 +1006,7 @@ U8 CMPpi(GC* gc) {
 }
 
 // POW reg16 imm8 - Calcaulate pow(reg16, imm8) and store to reg16
-// Opcode: 74 01 04
+// Opcode: 74
 U8 POW10(GC* gc) {
   gc->reg[gc->mem[gc->PC+1]].word = (U16)pow(gc->reg[gc->mem[gc->PC+1]].word, gc->mem[gc->PC+2]);
   gc->PC += 3;
