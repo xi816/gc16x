@@ -111,28 +111,28 @@ U8 UNK(GC* gc) {    // Unknown instruction
 // 0F 29 -- Jump if zero flag set to imm16 address
 U8 JME0(GC* gc) {
   if (ZF(gc->PS)) { gc->PC = ReadWord(gc, gc->PC+1); RESET_ZF(gc->PS); }
-  else { gc->PC += 3; }
+  else gc->PC += 3;
   return 0;
 }
 
 // 0F 2A -- Jump set to imm16 address if zero flag not
 U8 JMNE0(GC* gc) {
-  if (!ZF(gc->PS)) { gc->PC = ReadWord(gc, gc->PC+1); }
-  else { gc->PC += 3; }
+  if (!ZF(gc->PS)) gc->PC = ReadWord(gc, gc->PC+1);
+  else gc->PC += 3;
   return 0;
 }
 
 // 0F BB -- Jump to imm16 address if negative flag set
 U8 JL0(GC* gc) {
   if (NF(gc->PS)) { gc->PC = ReadWord(gc, gc->PC+1); gc->PS &= 0b11111101; }
-  else { gc->PC += 3; }
+  else gc->PC += 3;
   return 0;
 }
 
 // 0F CB -- Jump to imm16 address if negative flag set
 U8 JG0(GC* gc) {
   if (!NF(gc->PS)) { gc->PC = ReadWord(gc, gc->PC+1); RESET_NF(gc->PS); }
-  else { gc->PC += 3; }
+  else gc->PC += 3;
   return 0;
 }
 

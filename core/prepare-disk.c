@@ -33,6 +33,7 @@ int32_t main(int argc, char** argv) {
   system("./kasm -d -import govnos/exports/boot govnos/gsfetch.asm govnos/gsfetch.bin");
   system("./kasm -d -import govnos/exports/boot govnos/reboot.asm govnos/reboot.bin");
   system("./kasm -d -import govnos/exports/boot govnos/get.asm govnos/get.bin");
+  system("./kasm -d -import govnos/exports/boot govnos/memed.asm govnos/memed.bin");
   system("./kasm -d govnos/scrclr.asm govnos/scrclr.bin");
 
   // Load GovnOS
@@ -45,5 +46,6 @@ int32_t main(int argc, char** argv) {
   sprintf(fcom, "./gload %s govnos/scrclr.bin \"scrclr\"", argv[1]); system(fcom);
   sprintf(fcom, "./gload %s govnos/reboot.bin \"reboot\"", argv[1]); system(fcom);
   sprintf(fcom, "./gload %s govnos/get.bin \"get\"", argv[1]); system(fcom);
+  sprintf(fcom, "./gload %s govnos/memed.bin \"memed\"", argv[1]); system(fcom);
   return 0;
 }

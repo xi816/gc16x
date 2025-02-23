@@ -369,12 +369,17 @@ scani:
   jl .loop
   cmp %bx $3A ; Check if greater than '9'+1
   jg .loop
+  cmp %bx $7F ; Check for Backspace
+  jme .back
 
   mul %ax 10
   push %bx
   int $02
   sub %bx 48
   add %ax %bx
+  jmp .loop
+.back: ; Backspace handler
+  div %ax 10
   jmp .loop
 
 ; scans - Scan a string from standard input
