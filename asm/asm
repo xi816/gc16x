@@ -1264,6 +1264,7 @@ def main(argc: int, argv: list) -> int:
     src = fl.read();
   src = RemEmpty(src)+"\0";
   tokens, exitcode = Lex(src, progname);
+  PrintTokens(tokens);
   if (type(tokens[1]) is int):
     print("Fatal error. Can't compile");
     exit(tokens);

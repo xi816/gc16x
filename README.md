@@ -2,6 +2,9 @@
 
 GC16X is a virtual machine for the Govno Core 16X processor.
 
+> [!NOTE]
+> The new version of the CPU called GC24 is avaliable at https://github.com/xi816/gc24/
+
 ## Start
 1. Compile the source code\
 The `./ball` script compiles all of the programs included in this repo: GC16X, mkfs.govnfs, gboot and GASMAN.\
